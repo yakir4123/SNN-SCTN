@@ -21,7 +21,6 @@ class Resonator:
 
     def __init__(self, freq0, f_pulse):
         LF, LP = _desired_freq0_parameter(freq0, f_pulse)
-        # LF, LP = 4, 20
         self.freq0 = freq0
         if LF > 2:
             # self.gain_factor = 9472 / ((2**(2*LF-3))*(1+LP))
@@ -118,9 +117,9 @@ class SemiResonator:
         LF, LP = _desired_freq0_parameter(freq0, f_pulse)
         self.freq0 = freq0
         if LF > 2:
-            self.gain_factor = 9472 / ((2**(2*LF-3))*(1+LP))
+            self.gain_factor = 9344 / ((2**(2*LF-3))*(1+LP))
         else:
-            self.gain_factor = 9472 / ((2**LF)*(1+LP))
+            self.gain_factor = 9344 / ((2**LF)*(1+LP))
         print(f'freq = {int(_freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}')
         LP -= 2
         self.amplitude = 1000 * self.gain_factor
@@ -162,9 +161,9 @@ class CustomResonator:
         LF, LP = _desired_freq0_parameter(freq0, f_pulse)
         self.freq0 = freq0
         if LF > 2:
-            self.gain_factor = 9472 / ((2**(2*LF-3))*(1+LP))
+            self.gain_factor = 9344 / ((2**(2*LF-3))*(1+LP))
         else:
-            self.gain_factor = 9472 / ((2**LF)*(1+LP))
+            self.gain_factor = 9344 / ((2**LF)*(1+LP))
 
         self.amplitude = 1000 * self.gain_factor
         print(f'freq = {int(_freq_of_resonator(f_pulse, LF, LP))}, with LF={LF}, LP={LP}')
@@ -238,11 +237,56 @@ def _freq_of_resonator(f_pulse, LF, LP):
 
 @njit
 def _desired_freq0_parameter(freq0, f_pulse):
-    x = np.arange(8)
-    y = np.arange(100)
+    x = np.arange(0, 8)
+    y = np.arange(110)
     freqs_options = np.zeros((len(x), len(y)))
-    for i in range(len(x)):
+    for i in range(4, len(x)):
         freqs_options[i, :] = _freq_of_resonator(f_pulse, i, y)
     # find the parameter that will give the closest frequency as the desired frequency
     indices = np.argmin(np.abs(freqs_options - freq0))
     return indices // len(y), indices % len(y)
+
+
+def log_membrane_potential(resonator, neurons_id=None):
+    if neurons_id is None:
+        neurons = range(len(resonator.network.neurons))
+    elif type(neurons_id) == int:
+        neurons = [neurons_id]
+    else:
+        neurons = neurons_id
+    for i in neurons:
+        resonator.network.neurons[i].log_membrane_potential = True
+
+
+def log_rand_gauss_var(resonator, neurons_id=None):
+    if neurons_id is None:
+        neurons = range(len(resonator.network.neurons))
+    elif type(neurons_id) == int:
+        neurons = [neurons_id]
+    else:
+        neurons = neurons_id
+    for i in neurons:
+        resonator.network.neurons[i].log_rand_gauss_var = True
+
+
+def log_ca(resonator, neurons_id=None):
+    if neurons_id is None:
+        neurons = range(len(resonator.network.neurons))
+    elif type(neurons_id) == int:
+        neurons = [neurons_id]
+    else:
+        neurons = neurons_id
+    for i in neurons:
+        resonator.network.neurons[i].log_ca = True
+
+
+def log_out_spikes(resonator, neurons_id=None):
+    if neurons_id is None:
+        neurons = range(len(resonator.network.neurons))
+    elif type(neurons_id) == int:
+        neurons = [neurons_id]
+    else:
+        neurons = neurons_id
+    for i in neurons:
+        resonator.network.neurons[i].log_out_spikes = True
+

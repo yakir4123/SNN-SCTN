@@ -30,7 +30,7 @@ if __name__ == '__main__':
             out_f.setnchannels(1)
             out_f.setsampwidth(2)  # number of bytes
             out_f.setframerate(16000)
-   b         out_f.writeframesraw(data)
+            out_f.writeframesraw(data)
     audio_path = 'sound.wav'
 
     data, sr = librosa.load(audio_path, sr=16000)

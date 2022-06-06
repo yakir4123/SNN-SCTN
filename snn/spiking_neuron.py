@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int32, float32, int8, float64, int64, int16
+from numba import int32, float32, int8, float64, int64, int16, boolean
 from helpers import jitclass, njit
 
 spec = OrderedDict([
@@ -32,9 +32,13 @@ spec = OrderedDict([
     ('threshold_potentiation_low', float32),
     ('threshold_potentiation_high', float32),
 
+    ('log_membrane_potential', boolean),
     ('membrane_potential_graph', float32[:]),
+    ('log_rand_gauss_var', boolean),
     ('rand_gauss_var_graph', int32[:]),
+    ('log_ca', boolean),
     ('ca_graph', float32[:]),
+    ('log_out_spikes', boolean),
     ('out_spikes', int8[:]),
     ('index', int32),
 ])
@@ -50,7 +54,8 @@ class SCTNeuron:
     def __init__(self, synapses_weights, leakage_factor=0, leakage_period=1, leakage_timer=0, threshold_weight=0.5,
                  activation_function=2, ca=0, ca_peak=1, threshold_potential=3, max_weight=1, min_weight=0,
                  theta=0, shifting_const=8e-8, threshold_potentiation_high=100, threshold_potentiation_low=10,
-                 threshold_depression_high=100, threshold_depression_low=10, delta_x=5e-7, threshold_pulse=0):
+                 threshold_depression_high=100, threshold_depression_low=10, delta_x=5e-7, threshold_pulse=0,
+                 log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False, log_out_spikes=False):
         synapses_weights = synapses_weights.astype(np.float64)
         self.n_synapses = len(synapses_weights)
         self.membrane_potential = 0.0
@@ -80,10 +85,14 @@ class SCTNeuron:
         self.pn_generator = 1
         self.activation_function = activation_function
 
-        self.membrane_potential_graph = np.zeros(10_000_000).astype('float32')
-        self.ca_graph = np.zeros(10_000_000).astype('float32')
-        self.out_spikes = np.zeros(10_000_000).astype('int8')
-        self.rand_gauss_var_graph = np.zeros(10_000_000).astype('int32')
+        self.log_membrane_potential = log_membrane_potential
+        self.log_ca = log_ca
+        self.log_rand_gauss_var = log_rand_gauss_var
+        self.log_out_spikes = log_out_spikes
+        self.membrane_potential_graph = np.zeros(100).astype('float32')
+        self.ca_graph = np.zeros(100).astype('float32')
+        self.out_spikes = np.zeros(100).astype('int8')
+        self.rand_gauss_var_graph = np.zeros(100).astype('int32')
         self.index = 0
 
     def ctn_cycle(self, f, enable, learning):
@@ -91,13 +100,27 @@ class SCTNeuron:
         if learning:
             self._learn(f, emit_spike)
 
-        self.membrane_potential_graph[self.index] = self.membrane_potential
-        # self.rand_gauss_var_graph[self.index] = self.rand_gauss_var
-        # self.ca_graph[self.index] = self.ca
-        self.out_spikes[self.index] = emit_spike
+        if self.log_membrane_potential:
+            if self.index == len(self.membrane_potential_graph):
+                self.membrane_potential_graph = np.concatenate((self.membrane_potential_graph,
+                                                                np.zeros(self.index).astype('float32')))
+            self.membrane_potential_graph[self.index] = self.membrane_potential
+        if self.log_rand_gauss_var:
+            if self.index == len(self.rand_gauss_var_graph):
+                self.rand_gauss_var_graph = np.concatenate((self.rand_gauss_var_graph,
+                                                            np.zeros(self.index).astype('int32')))
+            self.rand_gauss_var_graph[self.index] = self.rand_gauss_var
+        if self.log_ca:
+            if self.index == len(self.ca_graph):
+                self.ca_graph = np.concatenate((self.ca_graph,
+                                                np.zeros(self.index).astype('float32')))
+            self.ca_graph[self.index] = self.ca
+        if self.log_out_spikes:
+            if self.index == len(self.out_spikes):
+                self.out_spikes = np.concatenate((self.out_spikes,
+                                                  np.zeros(self.index).astype('int8')))
+            self.out_spikes[self.index] = emit_spike
         self.index += 1
-        # if emit_spike:
-        #     self.membrane_potential = 0
         return emit_spike
 
     def _kernel(self, f, enable):
@@ -106,7 +129,8 @@ class SCTNeuron:
                 self.membrane_potential += np.sum(np.multiply(f, self.synapses_weights))
                 self.membrane_potential += self.theta
             else:
-                self.membrane_potential += np.sum(np.multiply(f, self.synapses_weights * (2 ** (self.leakage_factor - 3))))
+                self.membrane_potential += np.sum(
+                    np.multiply(f, self.synapses_weights * (2 ** (self.leakage_factor - 3))))
                 self.membrane_potential += self.theta * (2 ** (self.leakage_factor - 3))
 
             self.membrane_potential = np.clip(np.array([self.membrane_potential]), -524287, 524287)[0]
@@ -181,7 +205,7 @@ class SCTNeuron:
 
 @njit
 def createEmptySCTN():
-    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, False, False, False, False)
 
 
 @jitclass({'_id': int32})

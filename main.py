@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from helpers import *
 from helpers.graphs import plot_network
-from snn.resonator import SemiResonator, Resonator, CustomResonator, test_frequency
+from snn.resonator import SemiResonator, Resonator, CustomResonator, test_frequency, log_membrane_potential
 from snn.spiking_neuron import SCTNeuron, IDENTITY, BINARY, createEmptySCTN
 from os.path import dirname, join as pjoin
 
@@ -45,13 +45,14 @@ def identity_test():
 
 
 if __name__ == '__main__':
-    freq0 = 727
-    start_freq = 0
+    freq0 = 250
+    start_freq = 200
     f_pulse = 1.536 * (10 ** 6)
-    test_size = 8_000_000
-    step = 1/5_000
-    # my_resonator = SemiResonator(freq0, f_pulse)
-    my_resonator = Resonator(freq0, f_pulse)
+    test_size = 10_000_000
+    step = 1/100_000
+    my_resonator = CustomResonator(freq0, f_pulse)
+    # my_resonator = Resonator(freq0, f_pulse)
+    log_membrane_potential(my_resonator)
     # plot_network(my_resonator.network)
     timing(test_frequency)(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
     # for i in range(1, len(my_resonator.network.neurons)):

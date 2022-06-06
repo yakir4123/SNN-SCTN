@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 debug = False
 
+
 if not debug:
     from numba.experimental import jitclass
     from numba import njit

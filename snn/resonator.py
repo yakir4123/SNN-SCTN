@@ -240,7 +240,7 @@ def _desired_freq0_parameter(freq0, f_pulse):
     x = np.arange(0, 8)
     y = np.arange(110)
     freqs_options = np.zeros((len(x), len(y)))
-    for i in range(4, len(x)):
+    for i in range(3, len(x)):
         freqs_options[i, :] = _freq_of_resonator(f_pulse, i, y)
     # find the parameter that will give the closest frequency as the desired frequency
     indices = np.argmin(np.abs(freqs_options - freq0))

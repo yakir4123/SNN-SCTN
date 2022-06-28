@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from helpers import *
 from helpers.graphs import plot_network
 from snn.resonator import SemiResonator, Resonator, CustomResonator, test_frequency, log_membrane_potential, \
-    log_out_spikes
+    log_out_spikes, _freq_of_resonator
 from snn.spiking_neuron import SCTNeuron, IDENTITY, BINARY, createEmptySCTN
 from os.path import dirname, join as pjoin
 
@@ -46,28 +46,39 @@ def identity_test():
 
 
 if __name__ == '__main__':
-    freq0 = 7000
-    start_freq = 2000
+    freq0 = 104
+    start_freq = 0
+    spectrum = 2*(freq0 - start_freq)
+
     f_pulse = 1.536 * (10 ** 6)
-    test_size = 100_000_000
-    step = 1/10_000
+    test_size = 10_000_000
+    step = 1 / (test_size // spectrum)
+    print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
     my_resonator = Resonator(freq0, f_pulse)
-    # my_resonator = Resonator(freq0, f_pulse)
-    # log_membrane_potential(my_resonator, neurons_id=[17])
+    log_membrane_potential(my_resonator, neurons_id=[17])
     log_out_spikes(my_resonator, neurons_id=[17])
     # plot_network(my_resonator.network)
     timing(test_frequency)(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
-    # for i in range(1, len(my_resonator.network.neurons)):
-    for i in [-1]:
+    for i in [17]:#range(1, 18):
+        neuron = my_resonator.network.neurons[1]
+        LF = neuron.leakage_factor
+        LP = neuron.leakage_period
         neuron = my_resonator.network.neurons[i]
+        skip = 20
         spikes_amount = neuron.out_spikes[:neuron.index]
-        spikes_amount = np.convolve(spikes_amount, np.ones(20000, dtype=int), 'valid')
-        # spikes_amount = neuron.membrane_potential_graph[:neuron.index]
-        skip = 1
+        spikes_amount = np.convolve(spikes_amount, np.ones(5000, dtype=int), 'valid')
         y = spikes_amount[::skip]
         x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]
         plt.plot(x, y)
         plt.axvline(x=freq0, c='red')
-        plt.title(f'neuron {i}')
+        plt.title(f'neuron {i} spikes')
+        plt.show()
+        membrane = neuron.membrane_potential_graph[:neuron.index]
+        y = membrane[::skip]
+        x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]
+        plt.plot(x, y)
+        plt.axvline(x=freq0, c='red')
+        f = int(_freq_of_resonator(f_pulse, LF, LP))
+        plt.title(f'neuron {i}, LF = {LF}, LP = {LP}, df = {freq0}, f = {f}')
         plt.show()
     print("Nice")

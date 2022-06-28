@@ -8,7 +8,7 @@ from numpy import int8
 from helpers import jitclass, njit
 from snn.spiking_network import SpikingNetwork
 from snn.layers import SCTNLayer
-from snn.spiking_neuron import SCTNeuron, IDENTITY, createEmptySCTN, BINARY
+from snn.spiking_neuron import SCTNeuron, IDENTITY, createEmptySCTN, BINARY, SIGMOID
 
 
 @jitclass(OrderedDict([
@@ -21,14 +21,11 @@ class Resonator:
 
     def __init__(self, freq0, f_pulse):
         LF, LP = _desired_freq0_parameter(freq0, f_pulse)
+        LF, LP = 6, 36
         self.freq0 = freq0
-        if LF > 2:
-            # self.gain_factor = 9472 / ((2**(2*LF-3))*(1+LP))
-            self.gain_factor = 9344 / ((2**(2*LF-3))*(1+LP))
-        else:
-            # self.gain_factor = 9472 / ((2**LF)*(1+LP))
-            self.gain_factor = 9344 / ((2**LF)*(1+LP))
-        print(f'freq = {int(_freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor*10000000)}/10000000')
+        self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
+        print(f'freq = {int(_freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor*100000000)}/100000000')
+        self.gain_factor = int(self.gain_factor*100000000)/100000000
         self.amplitude = 1000 * self.gain_factor
         self.network = SpikingNetwork()
         neuron = createEmptySCTN()
@@ -40,7 +37,7 @@ class Resonator:
         neuron.synapses_weights = np.array([11 * self.gain_factor, -9 * self.gain_factor], dtype=np.float64)
         neuron.leakage_factor = LF
         neuron.leakage_period = LP
-        neuron.theta = -1 * self.gain_factor
+        neuron.theta = int(-1 * self.gain_factor)
         neuron.activation_function = IDENTITY
         self.network.add_layer(SCTNLayer([neuron]))
 
@@ -50,7 +47,7 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = -5 * self.gain_factor
+            neuron.theta = int(-5 * self.gain_factor)
             neuron.activation_function = IDENTITY
             self.network.add_layer(SCTNLayer([neuron]))
 
@@ -60,7 +57,7 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = -5 * self.gain_factor
+            neuron.theta = int(-5 * self.gain_factor)
             neuron.activation_function = IDENTITY
             self.network.add_layer(SCTNLayer([neuron]))
             # self.network.add_neuron(neuron)
@@ -71,7 +68,7 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = -5 * self.gain_factor
+            neuron.theta = int(-5 * self.gain_factor)
             neuron.activation_function = BINARY
             self.network.add_neuron(neuron)
 
@@ -81,18 +78,18 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = -5 * self.gain_factor
+            neuron.theta = int(-5 * self.gain_factor)
             neuron.activation_function = IDENTITY
             self.network.add_neuron(neuron)
 
         # SCTN 17
         neuron = createEmptySCTN()
-        # neuron.synapses_weights = np.array([6 * self.gain_factor] * 4, dtype=np.float64)
         neuron.synapses_weights = np.array([6] * 4, dtype=np.float64)
         neuron.leakage_factor = 5
         neuron.leakage_period = 500
-        neuron.theta = -12 #* self.gain_factor
-        neuron.activation_function = IDENTITY
+        neuron.theta = -12
+        neuron.threshold_pulse = 150000
+        neuron.activation_function = BINARY
         self.network.add_neuron(neuron)
 
         # feedbacks
@@ -209,7 +206,7 @@ def input_by_spike(resonator, spike):
 
 @njit
 def input_by_potential(resonator, potential):
-    resonator.network.layers_neurons[0].neurons[0].membrane_potential = potential * resonator.amplitude
+    resonator.network.layers_neurons[0].neurons[0].membrane_potential = np.int16(potential * resonator.amplitude)
     resonator.network.input(np.array([0]))
 
 
@@ -218,8 +215,9 @@ def test_frequency(resonator, test_size=10_000_000, start_freq=0, step=1/200000,
     sine_wave = create_sine_wave(test_size, clk_freq, start_freq, step)
     for i, sample in enumerate(sine_wave):
         input_by_potential(resonator, sample)
-        # if 4285 <= i < 4300:
-        #     print(f'{int(resonator.network.neurons[13].membrane_potential)}')
+        # if 140 <= i < 150:
+            # print(f'{int(resonator.network.neurons[0].membrane_potential)}')
+            # print(f'{int(resonator.network.neurons[0].rand_gauss_var)}')
 
 
 @njit
@@ -238,13 +236,28 @@ def _freq_of_resonator(f_pulse, LF, LP):
 @njit
 def _desired_freq0_parameter(freq0, f_pulse):
     x = np.arange(0, 8)
-    y = np.arange(110)
+    y = np.arange(300)
     freqs_options = np.zeros((len(x), len(y)))
     for i in range(3, len(x)):
         freqs_options[i, :] = _freq_of_resonator(f_pulse, i, y)
+    freqs_options[:, 0] = 0#np.zeros(len(x))
     # find the parameter that will give the closest frequency as the desired frequency
-    indices = np.argmin(np.abs(freqs_options - freq0))
-    return indices // len(y), indices % len(y)
+    indices = np.argmin(np.abs(freqs_options - freq0), axis=1)
+    lf_lp_options = np.array(list(zip(x, indices)))
+    best_lp_option = np.array([freqs_options[int(opt[0]), int(opt[1])] for opt in lf_lp_options])
+    print_options = np.zeros((8, 3))
+    print_options[:, :2] = lf_lp_options
+    print_options[:, 2] = best_lp_option
+    best_lp_option = np.abs(freq0 - best_lp_option) / freq0
+    print(print_options)
+    best_lp_option = best_lp_option < 0.05
+    best_lp_option = best_lp_option[::-1]
+    lp = len(best_lp_option) - np.argmax(best_lp_option) - 1
+    lf = lf_lp_options[lp][0]
+    lp = lf_lp_options[lp][1]
+    return int(lf), int(lp)
+    # indices = np.argmin(np.abs(freqs_options - freq0))
+    # return indices // len(y), indices % len(y)
 
 
 def log_membrane_potential(resonator, neurons_id=None):

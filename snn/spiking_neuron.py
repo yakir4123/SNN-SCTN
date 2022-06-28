@@ -6,10 +6,10 @@ from helpers import jitclass, njit
 
 spec = OrderedDict([
     ('n_synapses', int32),
-    ('membrane_potential', float32),
+    ('membrane_potential', int32),
     ('_id', int32),
     ('ca', float32),
-    ('theta', float32),
+    ('theta', int16),
     ('ca_peak', float32),
     ('delta_x', float32),
     ('max_weight', float32),
@@ -58,7 +58,7 @@ class SCTNeuron:
                  log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False, log_out_spikes=False):
         synapses_weights = synapses_weights.astype(np.float64)
         self.n_synapses = len(synapses_weights)
-        self.membrane_potential = 0.0
+        self.membrane_potential = 0
 
         self._id = -1
         self.ca = ca
@@ -129,11 +129,16 @@ class SCTNeuron:
                 self.membrane_potential += np.sum(np.multiply(f, self.synapses_weights))
                 self.membrane_potential += self.theta
             else:
-                self.membrane_potential += np.sum(
-                    np.multiply(f, self.synapses_weights * (2 ** (self.leakage_factor - 3))))
+                lf = (2 ** (self.leakage_factor - 3))
+                for i in range(len(self.synapses_weights)):
+                    self.membrane_potential += f[i] * self.synapses_weights[i] * lf
+                    self.membrane_potential = int(self.membrane_potential)
+                # self.membrane_potential += int(np.sum(
+                #     np.multiply(f, self.synapses_weights * (2 ** (self.leakage_factor - 3)))))
                 self.membrane_potential += self.theta * (2 ** (self.leakage_factor - 3))
 
             self.membrane_potential = np.clip(np.array([self.membrane_potential]), -524287, 524287)[0]
+            # self.membrane_potential = np.clip(np.array([self.membrane_potential]), -2147483648, 2147483647)[0]
 
         # can't use dictionary of function because of numba ...
         if self.activation_function == IDENTITY:
@@ -175,17 +180,23 @@ class SCTNeuron:
 
     def _activation_function_identity(self):
         const = 32767
-        # const = 31000
         c = self.membrane_potential + const
-        # m = 65536
         m = 65536
-        a = 1
-        self.rand_gauss_var = int(a * self.rand_gauss_var + c + 1)
-        if self.rand_gauss_var >= m:
-            self.rand_gauss_var = self.rand_gauss_var % m
+
+        if self.membrane_potential > const:
             emit_spike = 1
-        else:
+            self.rand_gauss_var = const
+        elif self.membrane_potential < -const:
             emit_spike = 0
+            self.rand_gauss_var = const
+        else:
+            self.rand_gauss_var = int(self.rand_gauss_var + c + 1)
+            if self.rand_gauss_var >= m:
+                # self.rand_gauss_var = self.rand_gauss_var % m
+                self.rand_gauss_var -= m
+                emit_spike = 1
+            else:
+                emit_spike = 0
         return emit_spike
 
     def _activation_function_binary(self):

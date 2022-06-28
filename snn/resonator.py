@@ -21,7 +21,7 @@ class Resonator:
 
     def __init__(self, freq0, f_pulse):
         LF, LP = _desired_freq0_parameter(freq0, f_pulse)
-        LF, LP = 6, 36
+        # LF, LP = 3, 3
         self.freq0 = freq0
         self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
         print(f'freq = {int(_freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor*100000000)}/100000000')
@@ -37,7 +37,8 @@ class Resonator:
         neuron.synapses_weights = np.array([11 * self.gain_factor, -9 * self.gain_factor], dtype=np.float64)
         neuron.leakage_factor = LF
         neuron.leakage_period = LP
-        neuron.theta = int(-1 * self.gain_factor)
+        # neuron.theta = int(-1 * self.gain_factor)
+        neuron.theta = -1 * self.gain_factor
         neuron.activation_function = IDENTITY
         self.network.add_layer(SCTNLayer([neuron]))
 
@@ -47,7 +48,8 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = int(-5 * self.gain_factor)
+            # neuron.theta = int(-5 * self.gain_factor)
+            neuron.theta = -5 * self.gain_factor
             neuron.activation_function = IDENTITY
             self.network.add_layer(SCTNLayer([neuron]))
 
@@ -57,7 +59,8 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = int(-5 * self.gain_factor)
+            # neuron.theta = int(-5 * self.gain_factor)
+            neuron.theta = -5 * self.gain_factor
             neuron.activation_function = IDENTITY
             self.network.add_layer(SCTNLayer([neuron]))
             # self.network.add_neuron(neuron)
@@ -68,7 +71,7 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = int(-5 * self.gain_factor)
+            neuron.theta = -5 * self.gain_factor
             neuron.activation_function = BINARY
             self.network.add_neuron(neuron)
 
@@ -78,7 +81,7 @@ class Resonator:
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
-            neuron.theta = int(-5 * self.gain_factor)
+            neuron.theta = -5 * self.gain_factor
             neuron.activation_function = IDENTITY
             self.network.add_neuron(neuron)
 

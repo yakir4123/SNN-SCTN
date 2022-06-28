@@ -6,10 +6,12 @@ from helpers import jitclass, njit
 
 spec = OrderedDict([
     ('n_synapses', int32),
-    ('membrane_potential', int32),
+    # ('membrane_potential', int32),
+    ('membrane_potential', float32),
     ('_id', int32),
     ('ca', float32),
-    ('theta', int16),
+    # ('theta', int16),
+    ('theta', float32),
     ('ca_peak', float32),
     ('delta_x', float32),
     ('max_weight', float32),
@@ -58,7 +60,7 @@ class SCTNeuron:
                  log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False, log_out_spikes=False):
         synapses_weights = synapses_weights.astype(np.float64)
         self.n_synapses = len(synapses_weights)
-        self.membrane_potential = 0
+        self.membrane_potential = 0.0
 
         self._id = -1
         self.ca = ca
@@ -132,7 +134,7 @@ class SCTNeuron:
                 lf = (2 ** (self.leakage_factor - 3))
                 for i in range(len(self.synapses_weights)):
                     self.membrane_potential += f[i] * self.synapses_weights[i] * lf
-                    self.membrane_potential = int(self.membrane_potential)
+                    # self.membrane_potential = int(self.membrane_potential)
                 # self.membrane_potential += int(np.sum(
                 #     np.multiply(f, self.synapses_weights * (2 ** (self.leakage_factor - 3)))))
                 self.membrane_potential += self.theta * (2 ** (self.leakage_factor - 3))

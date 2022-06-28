@@ -46,7 +46,7 @@ def identity_test():
 
 
 if __name__ == '__main__':
-    freq0 = 104
+    freq0 = 100
     start_freq = 0
     spectrum = 2*(freq0 - start_freq)
 
@@ -65,14 +65,14 @@ if __name__ == '__main__':
         LP = neuron.leakage_period
         neuron = my_resonator.network.neurons[i]
         skip = 20
-        spikes_amount = neuron.out_spikes[:neuron.index]
-        spikes_amount = np.convolve(spikes_amount, np.ones(5000, dtype=int), 'valid')
-        y = spikes_amount[::skip]
-        x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]
-        plt.plot(x, y)
-        plt.axvline(x=freq0, c='red')
-        plt.title(f'neuron {i} spikes')
-        plt.show()
+        # spikes_amount = neuron.out_spikes[:neuron.index]
+        # spikes_amount = np.convolve(spikes_amount, np.ones(5000, dtype=int), 'valid')
+        # y = spikes_amount[::skip]
+        # x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]
+        # plt.plot(x, y)
+        # plt.axvline(x=freq0, c='red')
+        # plt.title(f'neuron {i} spikes')
+        # plt.show()
         membrane = neuron.membrane_potential_graph[:neuron.index]
         y = membrane[::skip]
         x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]

@@ -46,7 +46,7 @@ def identity_test():
 
 
 if __name__ == '__main__':
-    freq0 = 100
+    freq0 = 7000
     start_freq = 0
     spectrum = 2*(freq0 - start_freq)
 

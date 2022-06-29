@@ -251,11 +251,14 @@ def _desired_freq0_parameter(freq0, f_pulse):
     print_options = np.zeros((8, 3))
     print_options[:, :2] = lf_lp_options
     print_options[:, 2] = best_lp_option
-    best_lp_option = np.abs(freq0 - best_lp_option) / freq0
-    print(print_options)
-    best_lp_option = best_lp_option < 0.05
-    best_lp_option = best_lp_option[::-1]
-    lp = len(best_lp_option) - np.argmax(best_lp_option) - 1
+    print(print_options.astype(np.int32))
+    serach_best_lp_option = np.abs(freq0 - best_lp_option) / freq0
+    serach_best_lp_option = serach_best_lp_option < 0.05
+    serach_best_lp_option = serach_best_lp_option[::-1]
+    if sum(serach_best_lp_option) > 0:
+        lp = len(serach_best_lp_option) - np.argmax(serach_best_lp_option) - 1
+    else:
+        lp = np.argmin(np.abs(freq0 - best_lp_option))
     lf = lf_lp_options[lp][0]
     lp = lf_lp_options[lp][1]
     return int(lf), int(lp)

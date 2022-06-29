@@ -33,10 +33,11 @@ class SpikingNetwork:
         self.neurons = numbaList([createEmptySCTN() for _ in range(0)])
         self.layers_neurons = numbaList([SCTNLayer(None) for _ in range(0)])
 
-    def add_layer(self, layer):
+    def add_layer(self, layer, add_neurons, connect_neurons):
         for new_neuron in layer.neurons:
-            self.add_neuron(new_neuron)
-            if len(self.layers_neurons) > 0:
+            if add_neurons:
+                self.add_neuron(new_neuron)
+            if connect_neurons and len(self.layers_neurons) > 0:
                 [self.spikes_graph.connect(neuron, new_neuron) for neuron in self.layers_neurons[-1].neurons]
         self.layers_neurons.append(layer)
         return self
@@ -45,6 +46,23 @@ class SpikingNetwork:
         self.neurons.append(neuron)
         self.spikes_graph.add_node(neuron)
         self.enable_by.append(-1)
+
+    def add_network(self, network):
+        new_id_offset = self.spikes_graph.add_graph(network.spikes_graph)
+        for neuron in network.neurons:
+            neuron._id += new_id_offset
+
+        self.neurons += network.neurons
+        for i in range(len(network.enable_by)):
+            if network.enable_by[i] != -1:
+                network.enable_by[i] += new_id_offset
+
+        self.enable_by += network.enable_by
+        for i in range(len(network.layers_neurons)):
+            if i == len(self.layers_neurons):
+                self.layers_neurons.append(network.layers_neurons[i])
+            else:
+                self.layers_neurons[i].merge(network.layers_neurons[i])
 
     def get_layer(self, i):
         return self.layers_neurons[i]

@@ -23,6 +23,17 @@ class DirectedEdgeListGraph:
         self.in_edges.append(njit_empty_array())
         self.out_edges.append(njit_empty_array())
 
+    def add_graph(self, graph):
+        new_id_offset = len(self.out_edges)
+        self.spikes = np.concatenate([self.spikes, graph.spikes])
+        for edge in range(len(graph.in_edges)):
+            graph.in_edges[edge] += new_id_offset
+        self.in_edges = np.concatenate([self.in_edges, graph.in_edges])
+        for edge in range(len(graph.out_edges)):
+            graph.out_edges[edge] += new_id_offset
+        self.out_edges = np.concatenate([self.out_edges, graph.out_edges])
+        return new_id_offset
+
     def connect(self, source_node, target):
         self.connect_by_id(source_node._id, target._id)
 
@@ -59,11 +70,24 @@ def plot_network(network):
     G = nx.DiGraph()
     edges = []
     pos = {}
+
+    column_length = max(len(layer.neurons) for layer in network.layers_neurons)
+    for i, layer in enumerate(network.layers_neurons):
+        for j, neuron in enumerate(layer.neurons):
+            gap = column_length/len(layer.neurons)
+            pos[neuron._id] = [i, j * gap + gap/2]
+
     for out_edge, in_edges in enumerate(network.spikes_graph.out_edges):
-        pos[out_edge] = [out_edge, out_edge]
         for in_edge in in_edges:
-            edges.append((out_edge, in_edge))
-    G.add_edges_from(edges)
+            G.add_edge(out_edge, in_edge, color='black')
+
+    for in_edge, out_edge in enumerate(network.enable_by):
+        if out_edge != -1:
+            G.add_edge(out_edge, in_edge, color='red')
+
+    colors = nx.get_edge_attributes(G, 'color').values()
+
     plt.subplot(111)
-    nx.draw(G, with_labels=True, font_weight='bold', pos=pos)
+    nx.draw(G, with_labels=True, font_weight='bold', pos=pos, edge_color=colors)
+
     plt.show()

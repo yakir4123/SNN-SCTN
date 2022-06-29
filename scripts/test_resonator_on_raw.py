@@ -26,7 +26,6 @@ if __name__ == '__main__':
         resonators = numbaList([sctn.Resonator(freq0, clk_freq) for freq0 in freqs])
         [log_out_spikes(resonator, 17) for resonator in resonators]
         [log_membrane_potential(resonator, 17) for resonator in resonators]
-        # resonators = numbaList([sctn.Resonator(freq0, clk_freq) for freq0 in freqs])
 
         audio_path = f"../sounds/RWCP/buzzer/{audio_file}.raw"
         with open(audio_path, "rb") as inp_f:
@@ -50,10 +49,9 @@ if __name__ == '__main__':
         for n in [17]:#range(1, 18, 2):
             for resonator in resonators:
                 neuron = resonator.network.neurons[n]
-                spikes_amount = sum(neuron.out_spikes[:neuron.index])
-                print(f'{resonator.freq0}: {spikes_amount - len(data) // 2}')
-                # plt.plot(neuron.out_spikes[:neuron.index])
-                plt.plot(neuron.membrane_potential_graph[:neuron.index], label=resonator.freq0)
+                spikes_amount = np.convolve(neuron.out_spikes[:neuron.index], np.ones(10000, dtype=int), 'valid')
+                plt.plot(spikes_amount, label=resonator.freq0)
+                # plt.plot(neuron.membrane_potential_graph[:neuron.index], label=resonator.freq0)
         plt.legend()
         plt.title(f'audio_file {audio_file}')
         plt.show()

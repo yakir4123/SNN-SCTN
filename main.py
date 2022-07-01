@@ -2,7 +2,8 @@ import numpy as np
 
 from helpers import *
 from helpers.graphs import plot_network
-from snn.resonator import Resonator, test_frequency, log_membrane_potential, freq_of_resonator, log_out_spikes
+from snn.resonator import Resonator, test_frequency, log_membrane_potential, freq_of_resonator, log_out_spikes, \
+    CustomResonator
 from snn.spiking_neuron import IDENTITY, createEmptySCTN
 
 
@@ -39,7 +40,7 @@ def identity_test():
 
 
 if __name__ == '__main__':
-    freq0 = 4000
+    freq0 = 5000
     start_freq = 0
     spectrum = 2*(freq0 - start_freq)
 
@@ -47,26 +48,26 @@ if __name__ == '__main__':
     test_size = 10_000_000
     step = 1 / (test_size // spectrum)
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
+    # my_resonator = CustomResonator(freq0, f_pulse)
     my_resonator = Resonator(freq0, f_pulse)
+    # plot_network(my_resonator.network)
     log_membrane_potential(my_resonator)
-    # log_out_spikes(my_resonator, neurons_id=[17])
-    plot_network(my_resonator.network)
-    exit(0)
+    log_out_spikes(my_resonator)
     timing(test_frequency)(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
-    for i in range(1, 18):
+    for i in [-1]:
         neuron = my_resonator.network.neurons[1]
         LF = neuron.leakage_factor
         LP = neuron.leakage_period
         neuron = my_resonator.network.neurons[i]
         skip = 20
-        # spikes_amount = neuron.out_spikes[:neuron.index]
-        # spikes_amount = np.convolve(spikes_amount, np.ones(5000, dtype=int), 'valid')
-        # y = spikes_amount[::skip]
-        # x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]
-        # plt.plot(x, y)
-        # plt.axvline(x=freq0, c='red')
-        # plt.title(f'neuron {i} spikes')
-        # plt.show()
+        spikes_amount = neuron.out_spikes[:neuron.index]
+        spikes_amount = np.convolve(spikes_amount, np.ones(5000, dtype=int), 'valid')
+        y = spikes_amount[::skip]
+        x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]
+        plt.plot(x, y)
+        plt.axvline(x=freq0, c='red')
+        plt.title(f'neuron {i} spikes')
+        plt.show()
         membrane = neuron.membrane_potential_graph[:neuron.index]
         y = membrane[::skip]
         x = np.arange(start_freq, start_freq + test_size*step, step*skip)[:len(y)]

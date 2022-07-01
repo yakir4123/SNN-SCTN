@@ -5,7 +5,7 @@ from typing import List
 import networkx as nx
 from matplotlib import pyplot as plt
 
-debug = True
+debug = False
 
 
 if not debug:

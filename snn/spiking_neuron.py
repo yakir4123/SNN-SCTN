@@ -12,14 +12,12 @@ spec = OrderedDict([
     ('theta', float32),
     ('ca_peak', float32),
     ('delta_x', float32),
-    ('identity_c', int32),
+    ('identity_const', int32),
     ('max_weight', float32),
-    ('min_weight', float32),
     ('min_weight', float32),
     ('leakage_timer', int16),
     ('pn_generator', int32),
     ('leakage_factor', int16),
-    ('leakage_period', int16),
     ('rand_gauss_var', int32),
     ('shifting_const', float32),
     ('threshold_pulse', float32),
@@ -57,7 +55,7 @@ class SCTNeuron:
                  activation_function=2, ca=0, ca_peak=1, threshold_potential=3, max_weight=1, min_weight=0,
                  theta=0, shifting_const=8e-8, threshold_potentiation_high=100, threshold_potentiation_low=10,
                  threshold_depression_high=100, threshold_depression_low=10, delta_x=5e-7, threshold_pulse=0,
-                 identity_c=32767, log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False,
+                 identity_const=32767, log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False,
                  log_out_spikes=False, membrane_should_reset=True):
         synapses_weights = synapses_weights.astype(np.float64)
         self.n_synapses = len(synapses_weights)
@@ -70,7 +68,7 @@ class SCTNeuron:
         self.delta_x = delta_x
         self.max_weight = max_weight
         self.min_weight = min_weight
-        self.identity_c = identity_c
+        self.identity_const = identity_const
         self.leakage_timer = leakage_timer
         self.shifting_const = shifting_const
         self.leakage_factor = leakage_factor
@@ -185,9 +183,9 @@ class SCTNeuron:
             self.ca /= np.e
 
     def _activation_function_identity(self):
-        const = self.identity_c
+        const = self.identity_const
         c = self.membrane_potential + const
-        m = 2*(self.identity_c + 1)
+        m = 2*(self.identity_const + 1)
 
         if self.membrane_potential > const:
             emit_spike = 1

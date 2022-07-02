@@ -129,7 +129,7 @@ class CustomResonator:
 
     def __init__(self, freq0, f_pulse):
         LF, LP = _desired_freq0_parameter(freq0, f_pulse)
-        LF, LP = 3, 5
+        # LF, LP = 3, 5
         self.freq0 = freq0
         self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
         print(f'freq = {int(freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor * 100000000)}/100000000')

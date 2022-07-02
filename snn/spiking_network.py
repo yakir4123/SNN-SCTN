@@ -51,13 +51,15 @@ class SpikingNetwork:
         new_id_offset = self.spikes_graph.add_graph(network.spikes_graph)
         for neuron in network.neurons:
             neuron._id += new_id_offset
+            self.neurons.append(neuron)
 
-        self.neurons += network.neurons
+        # self.neurons += network.neurons
         for i in range(len(network.enable_by)):
             if network.enable_by[i] != -1:
                 network.enable_by[i] += new_id_offset
+                self.enable_by.append(network.enable_by[i])
 
-        self.enable_by += network.enable_by
+        # self.enable_by += network.enable_by
         for i in range(len(network.layers_neurons)):
             if i == len(self.layers_neurons):
                 self.layers_neurons.append(network.layers_neurons[i])

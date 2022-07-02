@@ -48,18 +48,18 @@ if __name__ == '__main__':
     test_size = 10_000_000
     step = 1 / (test_size // spectrum)
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
-    # my_resonator = CustomResonator(freq0, f_pulse)
-    my_resonator = Resonator(freq0, f_pulse)
+    my_resonator = CustomResonator(freq0, f_pulse)
+    # my_resonator = Resonator(freq0, f_pulse)
     # plot_network(my_resonator.network)
-    log_membrane_potential(my_resonator)
-    log_out_spikes(my_resonator)
+    log_membrane_potential(my_resonator, -1)
+    log_out_spikes(my_resonator, -1)
     timing(test_frequency)(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
-    for i in [-1]:
+    for i in [5]:
         neuron = my_resonator.network.neurons[1]
         LF = neuron.leakage_factor
         LP = neuron.leakage_period
         neuron = my_resonator.network.neurons[i]
-        skip = 20
+        skip = 50
         spikes_amount = neuron.out_spikes[:neuron.index]
         spikes_amount = np.convolve(spikes_amount, np.ones(5000, dtype=int), 'valid')
         y = spikes_amount[::skip]

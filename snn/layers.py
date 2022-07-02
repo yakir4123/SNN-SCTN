@@ -18,9 +18,10 @@ class InputLayer:
 ]))
 class SCTNLayer:
 
-    def __init__(self, neurons=None):
+    def __init__(self, neurons):
         if neurons is not None:
             self.neurons = numbaList(neurons)
 
     def merge(self, layer):
-        self.neurons = self.neurons + layer.neurons
+        for neuron in layer.neurons:
+            self.neurons.append(neuron)# = self.neurons + layer.neurons

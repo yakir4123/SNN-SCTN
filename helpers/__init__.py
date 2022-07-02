@@ -13,6 +13,12 @@ if not debug:
     from numba import njit
     from numba.typed import List as numbaList
     from numba.core.types import ListType as numbaListType
+    from numba import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
+    import warnings
+
+    warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
+    warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
+
 else:
 
     def njit(f):

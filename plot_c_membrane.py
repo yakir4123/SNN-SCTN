@@ -2,10 +2,10 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 
-freq0 = 3750
-start_freq = 1875
+freq0 = 5000
+start_freq = 0
 test_size = 10_000_000
-step = 1 / 2666
+step = 1 / 1000
 spikes_amount = np.zeros(test_size)
 
 
@@ -15,7 +15,7 @@ def trim_line(line):
     return line
 
 
-for neuron_i in [17]:#range(1, 18):
+for neuron_i in [4, 5]:#range(1, 18):
     i = 0
     try:
         with open(f'.membrane_potential/membrane_{neuron_i}.txt') as f:

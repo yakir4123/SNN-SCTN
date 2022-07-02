@@ -25,13 +25,15 @@ class DirectedEdgeListGraph:
 
     def add_graph(self, graph):
         new_id_offset = len(self.out_edges)
-        self.spikes = np.concatenate([self.spikes, graph.spikes])
+        self.spikes = np.concatenate((self.spikes, graph.spikes))
         for edge in range(len(graph.in_edges)):
             graph.in_edges[edge] += new_id_offset
-        self.in_edges = np.concatenate([self.in_edges, graph.in_edges])
+            self.in_edges.append(graph.in_edges[edge])
+        # self.in_edges = self.in_edges + graph.in_edges
         for edge in range(len(graph.out_edges)):
             graph.out_edges[edge] += new_id_offset
-        self.out_edges = np.concatenate([self.out_edges, graph.out_edges])
+            self.out_edges.append(graph.out_edges[edge])
+        # self.out_edges = self.out_edges + graph.out_edges
         return new_id_offset
 
     def connect(self, source_node, target):

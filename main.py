@@ -33,28 +33,28 @@ def identity_test():
         neuron.theta = theta
         neuron.leakage_period = 1001
         for i in range(1000):
-            neuron.ctn_cycle(np.array([0]), True, False)
+            neuron.ctn_cycle(np.array([0]), True)
             res_gauss[theta//theta_step, i] = neuron.rand_gauss_var
         res_spikes[theta//theta_step] = np.sum(neuron.out_spikes[:1000])
     return res_gauss, res_spikes
 
 
 if __name__ == '__main__':
-    freq0 = 5000
+    freq0 = 250
     start_freq = 0
     spectrum = 2*(freq0 - start_freq)
 
     f_pulse = 1.536 * (10 ** 6)
-    test_size = 10_000_000
+    test_size = 1_000_000
     step = 1 / (test_size // spectrum)
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
-    my_resonator = CustomResonator(freq0, f_pulse)
+    my_resonator = CustomResonator(freq0, f_pulse, 4, 60)
     # my_resonator = Resonator(freq0, f_pulse)
     # plot_network(my_resonator.network)
     log_membrane_potential(my_resonator, -1)
     log_out_spikes(my_resonator, -1)
     timing(test_frequency)(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
-    for i in [5]:
+    for i in [-1]:
         neuron = my_resonator.network.neurons[1]
         LF = neuron.leakage_factor
         LP = neuron.leakage_period

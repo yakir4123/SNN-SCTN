@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 from helpers import numbaList
 from helpers.graphs import plot_network
@@ -16,11 +17,12 @@ def snn_based_resonator(frequencies):
         network.add_network(resonator.network)
 
     neuron = createEmptySCTN()
-    neuron.synapses_weights = np.random.random(len(frequencies))
+    # neuron.synapses_weights = np.random.random(len(frequencies))
+    neuron.synapses_weights = np.ones(len(frequencies))
     neuron.leakage_factor = 1
     neuron.leakage_period = 1
     neuron.theta = 0
-    neuron.threshold_pulse = 150000
+    neuron.threshold_pulse = 15000
     neuron.activation_function = BINARY
 
     # sdsp
@@ -35,13 +37,33 @@ def snn_based_resonator(frequencies):
     neuron.threshold_potential = 3
     neuron.threshold_weight = 0.5 * (neuron.max_weight - neuron.min_weight)
     neuron.delta_x = 0.0000005 * neuron.max_weight
+    # neuron.learning = True
 
     network.add_layer(SCTNLayer([neuron]), True, True)
 
     return network
 
-
-network = snn_based_resonator([100, 250, 500, 1000, 1750, 2800, 3500, 5000, 7500, 10000, 15000])
+freqs = [
+        (100, 3, 299),
+        (250, 4, 60),
+        (500, 5, 14),
+        (1000, 6, 3),
+        (1750, 6, 1),
+        (2800, 3, 10),
+        (3500, 3, 8),
+        (5000, 3, 4),
+        (7500, 4, 1),
+        (10000, 3, 2),
+        (15000, 3, 1),
+    ]
+network = snn_based_resonator(freqs)
 plot_network(network)
+
+neuron = network.neurons[-1]
+membrane = neuron.membrane_potential_graph[:neuron.index]
+y = membrane
+plt.plot(y)
+plt.show()
+
 exit(0)
 

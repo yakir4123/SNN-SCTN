@@ -80,12 +80,16 @@ class SpikingNetwork:
 
     def input(self, spike_train):
         # first update that input neurons send spikes
-        self.spikes_graph.update_spike(self.neurons[0], spike_train[0])
-        for neuron in self.neurons:
-            enable = self.is_enable(neuron)
-            emit_spike = neuron.ctn_cycle(self.spikes_graph.get_input_spikes_to(neuron), enable, False)
-            self.spikes_graph.update_spike(neuron, emit_spike)
+        for i, layer in enumerate(self.layers_neurons):
+            for j, neuron in enumerate(layer.neurons):
+                if i == 0:
+                    self.spikes_graph.update_spike(neuron, spike_train[j])
+                # else:
+                enable = self.is_enable(neuron)
+                emit_spike = neuron.ctn_cycle(self.spikes_graph.get_input_spikes_to(neuron), enable)
+                self.spikes_graph.update_spike(neuron, emit_spike)
 
     def is_enable(self, neuron):
         # if nothing connected to enable gate or a there was a spike from the neuron that connected to enable gate
         return self.enable_by[neuron._id] == -1 or self.spikes_graph.spikes[self.enable_by[neuron._id]] == 1
+

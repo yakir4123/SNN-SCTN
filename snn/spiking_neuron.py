@@ -12,12 +12,14 @@ spec = OrderedDict([
     ('theta', float32),
     ('ca_peak', float32),
     ('delta_x', float32),
-    ('identity_const', int32),
+    ('learning', boolean),
     ('max_weight', float32),
     ('min_weight', float32),
-    ('leakage_timer', int16),
     ('pn_generator', int32),
+    ('leakage_timer', int16),
+    ('identity_const', int32),
     ('leakage_factor', int16),
+    ('leakage_period', int16),
     ('rand_gauss_var', int32),
     ('shifting_const', float32),
     ('threshold_pulse', float32),
@@ -55,7 +57,7 @@ class SCTNeuron:
                  activation_function=2, ca=0, ca_peak=1, threshold_potential=3, max_weight=1, min_weight=0,
                  theta=0, shifting_const=8e-8, threshold_potentiation_high=100, threshold_potentiation_low=10,
                  threshold_depression_high=100, threshold_depression_low=10, delta_x=5e-7, threshold_pulse=0,
-                 identity_const=32767, log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False,
+                 identity_const=32767, learning=False, log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False,
                  log_out_spikes=False, membrane_should_reset=True):
         synapses_weights = synapses_weights.astype(np.float64)
         self.n_synapses = len(synapses_weights)
@@ -81,6 +83,7 @@ class SCTNeuron:
         self.threshold_depression_high = threshold_depression_high
         self.threshold_potentiation_low = threshold_potentiation_low
         self.threshold_potentiation_high = threshold_potentiation_high
+        self.learning = learning
 
         self.rand_gauss_var = 0
         self.gaussian_rand_order = 8
@@ -98,14 +101,14 @@ class SCTNeuron:
         self.rand_gauss_var_graph = np.zeros(100).astype('int32')
         self.index = 0
 
-    def ctn_cycle(self, f, enable, learning):
+    def ctn_cycle(self, f, enable):
         emit_spike = self._kernel(f, enable)
+
+        if self.learning:
+            self._learn(f, emit_spike)
 
         if self.membrane_should_reset and emit_spike == 1:
             self.membrane_potential = 0
-
-        if learning:
-            self._learn(f, emit_spike)
 
         if self.log_membrane_potential:
             if self.index == len(self.membrane_potential_graph):
@@ -142,7 +145,6 @@ class SCTNeuron:
                 self.membrane_potential += self.theta * (2 ** (self.leakage_factor - 3))
 
             self.membrane_potential = np.clip(np.array([self.membrane_potential]), -524287, 524287)[0]
-            # self.membrane_potential = np.clip(np.array([self.membrane_potential]), -2147483640, 2147483640)[0]
 
         # can't use dictionary of function because of numba ...
         if self.activation_function == IDENTITY:
@@ -166,7 +168,7 @@ class SCTNeuron:
                 self.leakage_timer += 1
         return emit_spike
 
-    def _learn(self, f, out_pulse):
+    def _learn(self, f, emit_spike):
         if self.membrane_potential > self.threshold_potential and \
                 self.threshold_potentiation_high > self.ca > self.threshold_potentiation_low:
             self.synapses_weights[f == 1] += self.delta_x
@@ -177,7 +179,7 @@ class SCTNeuron:
         self.synapses_weights[self.synapses_weights <= self.threshold_weight] -= 2 * self.shifting_const
         self.synapses_weights = np.clip(self.synapses_weights, self.min_weight, self.max_weight)
 
-        if out_pulse:
+        if emit_spike:
             self.ca += self.ca_peak
         else:
             self.ca /= np.e
@@ -197,7 +199,6 @@ class SCTNeuron:
             self.rand_gauss_var = int(self.rand_gauss_var + c + 1)
             if self.rand_gauss_var >= m:
                 self.rand_gauss_var = self.rand_gauss_var % m
-                # self.rand_gauss_var -= m
                 emit_spike = 1
             else:
                 emit_spike = 0
@@ -220,7 +221,8 @@ class SCTNeuron:
 
 @njit
 def createEmptySCTN():
-    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32767, False, False, False, False, True)
+    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32767,
+                     False, False, False, False, False, True)
 
 
 @jitclass({'_id': int32})

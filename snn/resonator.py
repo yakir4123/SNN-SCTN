@@ -127,8 +127,9 @@ class Resonator:
 ]))
 class CustomResonator:
 
-    def __init__(self, freq0, f_pulse):
-        LF, LP = _desired_freq0_parameter(freq0, f_pulse)
+    def __init__(self, freq0, f_pulse, LF, LP):
+        if LF == -1 or LP == -1:
+            LF, LP = _desired_freq0_parameter(freq0, f_pulse)
         # LF, LP = 3, 5
         self.freq0 = freq0
         self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
@@ -160,19 +161,19 @@ class CustomResonator:
             neuron.activation_function = IDENTITY
             self.network.add_neuron(neuron)
 
-        neuron = createEmptySCTN()
-        neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
-        neuron.leakage_factor = LF
-        neuron.leakage_period = LP
-        neuron.theta = -5 * self.gain_factor
-        neuron.threshold_pulse = 15000
-        neuron.activation_function = BINARY
-        self.network.add_neuron(neuron)
+        # neuron = createEmptySCTN()
+        # neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
+        # neuron.leakage_factor = LF
+        # neuron.leakage_period = LP
+        # neuron.theta = -5 * self.gain_factor
+        # neuron.threshold_pulse = 15000
+        # neuron.activation_function = BINARY
+        # self.network.add_neuron(neuron)
 
         for neuron in self.network.neurons:
             neuron.membrane_should_reset = False
 
-        for i in range(0, 5):
+        for i in range(0, 4):
             self.network.connect_by_id(i, i + 1)
 
         # feedback
@@ -181,10 +182,10 @@ class CustomResonator:
 
         layer0 = SCTNLayer([self.network.neurons[0]])
         layer1 = SCTNLayer([self.network.neurons[i] for i in range(1, 5)])
-        layer2 = SCTNLayer([self.network.neurons[5]])
+        # layer2 = SCTNLayer([self.network.neurons[5]])
         self.network.add_layer(layer0, False, False)
         self.network.add_layer(layer1, False, False)
-        self.network.add_layer(layer2, False, False)
+        # self.network.add_layer(layer2, False, False)
 
 
 @njit

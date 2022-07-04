@@ -13,7 +13,6 @@ from snn.spiking_neuron import SCTNeuron, IDENTITY, createEmptySCTN, BINARY, SIG
 @jitclass(OrderedDict([
     ('network', SpikingNetwork.class_type.instance_type),
     ('gain_factor', float32),
-    ('amplitude', float32),
     ('freq0', int32),
 ]))
 class Resonator:
@@ -25,8 +24,8 @@ class Resonator:
         self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
         print(f'freq = {int(freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor * 100000000)}/100000000')
         self.gain_factor = int(self.gain_factor*100000000)/100000000
-        self.amplitude = 1000 * self.gain_factor
         self.network = SpikingNetwork()
+        self.network.add_amplitude(1000 * self.gain_factor)
         neuron = createEmptySCTN()
         neuron.activation_function = IDENTITY
         self.network.add_neuron(neuron)
@@ -122,7 +121,6 @@ class Resonator:
 @jitclass(OrderedDict([
     ('network', SpikingNetwork.class_type.instance_type),
     ('gain_factor', float32),
-    ('amplitude', float32),
     ('freq0', int32),
 ]))
 class CustomResonator:
@@ -133,11 +131,11 @@ class CustomResonator:
         # LF, LP = 3, 5
         self.freq0 = freq0
         self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
-        print(f'freq = {int(freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor * 100000000)}/100000000')
+        # print(f'freq = {int(freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor * 100000000)}/100000000')
         self.gain_factor = int(self.gain_factor*100000000)/100000000
 
-        self.amplitude = 1000 * self.gain_factor
         self.network = SpikingNetwork()
+        self.network.add_amplitude(1000 * self.gain_factor)
         neuron = createEmptySCTN()
         neuron.activation_function = IDENTITY
         self.network.add_neuron(neuron)
@@ -181,11 +179,11 @@ class CustomResonator:
                              self.network.neurons[1])
 
         layer0 = SCTNLayer([self.network.neurons[0]])
-        layer1 = SCTNLayer([self.network.neurons[i] for i in range(1, 5)])
-        # layer2 = SCTNLayer([self.network.neurons[5]])
+        layer1 = SCTNLayer([self.network.neurons[i] for i in range(1, 4)])
+        layer2 = SCTNLayer([self.network.neurons[4]])
         self.network.add_layer(layer0, False, False)
         self.network.add_layer(layer1, False, False)
-        # self.network.add_layer(layer2, False, False)
+        self.network.add_layer(layer2, False, False)
 
 
 @njit
@@ -195,8 +193,9 @@ def input_by_spike(resonator, spike):
 
 @njit
 def input_by_potential(resonator, potential):
-    resonator.network.layers_neurons[0].neurons[0].membrane_potential = np.int16(potential * resonator.amplitude)
-    resonator.network.input(np.array([0]))
+    # resonator.network.layers_neurons[0].neurons[0].membrane_potential = np.int16(potential * resonator.amplitude)
+    # resonator.network.input(np.array([0]))
+    resonator.network.input_potential(np.array([potential]))
 
 
 @njit
@@ -247,48 +246,4 @@ def _desired_freq0_parameter(freq0, f_pulse):
     lf = lf_lp_options[lp][0]
     lp = lf_lp_options[lp][1]
     return int(lf), int(lp)
-
-
-def log_membrane_potential(resonator, neurons_id=None):
-    if neurons_id is None:
-        neurons = range(len(resonator.network.neurons))
-    elif type(neurons_id) == int:
-        neurons = [neurons_id]
-    else:
-        neurons = neurons_id
-    for i in neurons:
-        resonator.network.neurons[i].log_membrane_potential = True
-
-
-def log_rand_gauss_var(resonator, neurons_id=None):
-    if neurons_id is None:
-        neurons = range(len(resonator.network.neurons))
-    elif type(neurons_id) == int:
-        neurons = [neurons_id]
-    else:
-        neurons = neurons_id
-    for i in neurons:
-        resonator.network.neurons[i].log_rand_gauss_var = True
-
-
-def log_ca(resonator, neurons_id=None):
-    if neurons_id is None:
-        neurons = range(len(resonator.network.neurons))
-    elif type(neurons_id) == int:
-        neurons = [neurons_id]
-    else:
-        neurons = neurons_id
-    for i in neurons:
-        resonator.network.neurons[i].log_ca = True
-
-
-def log_out_spikes(resonator, neurons_id=None):
-    if neurons_id is None:
-        neurons = range(len(resonator.network.neurons))
-    elif type(neurons_id) == int:
-        neurons = [neurons_id]
-    else:
-        neurons = neurons_id
-    for i in neurons:
-        resonator.network.neurons[i].log_out_spikes = True
 

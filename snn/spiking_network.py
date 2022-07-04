@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int8, int32
+from numba import int8, int32, float32
 
 from helpers.graphs import DirectedEdgeListGraph
 from snn.layers import SCTNLayer
@@ -11,6 +11,7 @@ from helpers import *
 
 
 @jitclass(OrderedDict([
+    ('amplitude', float32[:]),
     ('enable_by', numbaListType(int32)),
     ('neurons', numbaListType(SCTNeuron.class_type.instance_type)),
     ('spikes_graph', DirectedEdgeListGraph.class_type.instance_type),
@@ -32,6 +33,10 @@ class SpikingNetwork:
         # numba needs to identify what the list type, so create empty list
         self.neurons = numbaList([createEmptySCTN() for _ in range(0)])
         self.layers_neurons = numbaList([SCTNLayer(None) for _ in range(0)])
+        self.amplitude = np.array([np.float32(0) for _ in range(0)])
+
+    def add_amplitude(self, amplitude):
+        self.amplitude = np.append(self.amplitude, np.float32(amplitude))
 
     def add_layer(self, layer, add_neurons, connect_neurons):
         for new_neuron in layer.neurons:
@@ -53,13 +58,14 @@ class SpikingNetwork:
             neuron._id += new_id_offset
             self.neurons.append(neuron)
 
-        # self.neurons += network.neurons
+        for amplitude in network.amplitude:
+            self.add_amplitude(amplitude)
+
         for i in range(len(network.enable_by)):
             if network.enable_by[i] != -1:
                 network.enable_by[i] += new_id_offset
-                self.enable_by.append(network.enable_by[i])
+            self.enable_by.append(network.enable_by[i])
 
-        # self.enable_by += network.enable_by
         for i in range(len(network.layers_neurons)):
             if i == len(self.layers_neurons):
                 self.layers_neurons.append(network.layers_neurons[i])
@@ -88,8 +94,28 @@ class SpikingNetwork:
                 enable = self.is_enable(neuron)
                 emit_spike = neuron.ctn_cycle(self.spikes_graph.get_input_spikes_to(neuron), enable)
                 self.spikes_graph.update_spike(neuron, emit_spike)
+        last_neurons = np.array([n._id for n in self.layers_neurons[-1].neurons])
+        return self.spikes_graph.spikes[last_neurons]
+
+    def input_potential(self, potential):
+        potential = (potential * self.amplitude).astype(np.int16)
+        for i, p in enumerate(potential):
+            self.layers_neurons[0].neurons[i].membrane_potential = p
+        return self.input(np.zeros(len(potential)))
 
     def is_enable(self, neuron):
         # if nothing connected to enable gate or a there was a spike from the neuron that connected to enable gate
         return self.enable_by[neuron._id] == -1 or self.spikes_graph.spikes[self.enable_by[neuron._id]] == 1
+
+    def log_membrane_potential(self, neurons_id):
+        self.neurons[neurons_id].log_membrane_potential = True
+
+    def log_rand_gauss_var(self, neurons_id):
+        self.neurons[neurons_id].log_rand_gauss_var = True
+
+    def log_ca(self, neurons_id):
+        self.neurons[neurons_id].log_ca = True
+
+    def log_out_spikes(self, neurons_id):
+        self.neurons[neurons_id].log_out_spikes = True
 

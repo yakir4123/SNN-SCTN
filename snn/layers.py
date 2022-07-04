@@ -1,16 +1,7 @@
 from collections import OrderedDict
 
 from helpers import jitclass, numbaListType, numbaList
-from snn.spiking_neuron import InputNeuron, SCTNeuron
-
-
-@jitclass(OrderedDict([
-    ('neurons', numbaListType(InputNeuron.class_type.instance_type)),
-]))
-class InputLayer:
-
-    def __init__(self, n_neurons):
-        self.neurons = numbaList([InputNeuron() for i in range(n_neurons)])
+from snn.spiking_neuron import SCTNeuron
 
 
 @jitclass(OrderedDict([

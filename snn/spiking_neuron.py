@@ -107,9 +107,6 @@ class SCTNeuron:
         if self.learning:
             self._learn(f, emit_spike)
 
-        if self.membrane_should_reset and emit_spike == 1:
-            self.membrane_potential = 0
-
         if self.log_membrane_potential:
             if self.index == len(self.membrane_potential_graph):
                 self.membrane_potential_graph = np.concatenate((self.membrane_potential_graph,
@@ -130,6 +127,10 @@ class SCTNeuron:
                 self.out_spikes = np.concatenate((self.out_spikes,
                                                   np.zeros(self.index).astype('int8')))
             self.out_spikes[self.index] = emit_spike
+
+        if self.membrane_should_reset and emit_spike == 1:
+            self.membrane_potential = 0
+
         self.index += 1
         return emit_spike
 
@@ -223,10 +224,3 @@ class SCTNeuron:
 def createEmptySCTN():
     return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32767,
                      False, False, False, False, False, True)
-
-
-@jitclass({'_id': int32})
-class InputNeuron:
-
-    def __init__(self):
-        self._id = -1

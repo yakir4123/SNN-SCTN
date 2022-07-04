@@ -12,58 +12,73 @@ from snn.spiking_neuron import BINARY, createEmptySCTN, SIGMOID
 def snn_based_resonator(frequencies):
     network = SpikingNetwork()
     clk_freq = 1.536 * 10**6
-    resonators = numbaList([CustomResonator(freq0, clk_freq) for freq0 in frequencies])
+    resonators = numbaList([CustomResonator(freq0, clk_freq, LF, LP) for (freq0, LF, LP) in frequencies])
     for resonator in resonators:
         network.add_network(resonator.network)
 
+    return network
+
+
+def snn_based_resonator_for_learning(frequencies):
+    network = snn_based_resonator(frequencies)
     neuron = createEmptySCTN()
-    # neuron.synapses_weights = np.random.random(len(frequencies))
-    neuron.synapses_weights = np.ones(len(frequencies))
+    neuron.synapses_weights = np.random.random(len(frequencies))
     neuron.leakage_factor = 1
     neuron.leakage_period = 1
     neuron.theta = 0
-    neuron.threshold_pulse = 15000
+    neuron.threshold_pulse = 5
     neuron.activation_function = BINARY
 
     # sdsp
     neuron.ca = 0
     neuron.ca_peak = 1
-    neuron.max_weight = 0
-    neuron.min_weight = 1
-    neuron.threshold_potentiation_low = 10
-    neuron.threshold_potentiation_high = 100
-    neuron.threshold_depression_low = 10
-    neuron.threshold_depression_high = 100
-    neuron.threshold_potential = 3
+    neuron.max_weight = 1
+    neuron.min_weight = 0
+    neuron.threshold_potentiation_low = 2
+    neuron.threshold_potentiation_high = 9
+    neuron.threshold_depression_low = 2
+    neuron.threshold_depression_high = 9
+    neuron.threshold_potential = 5
     neuron.threshold_weight = 0.5 * (neuron.max_weight - neuron.min_weight)
     neuron.delta_x = 0.0000005 * neuron.max_weight
-    # neuron.learning = True
+    neuron.shifting_const = 0.00000008 * neuron.max_weight
+    neuron.learning = True
 
     network.add_layer(SCTNLayer([neuron]), True, True)
 
     return network
 
-freqs = [
-        (100, 3, 299),
-        (250, 4, 60),
-        (500, 5, 14),
-        (1000, 6, 3),
-        (1750, 6, 1),
-        (2800, 3, 10),
-        (3500, 3, 8),
-        (5000, 3, 4),
-        (7500, 4, 1),
-        (10000, 3, 2),
-        (15000, 3, 1),
-    ]
-network = snn_based_resonator(freqs)
-plot_network(network)
 
-neuron = network.neurons[-1]
-membrane = neuron.membrane_potential_graph[:neuron.index]
-y = membrane
-plt.plot(y)
-plt.show()
+def snn_based_resonator_for_test(frequencies):
+    network = snn_based_resonator(frequencies)
+    bells_neuron = createEmptySCTN()
+    bells_neuron.synapses_weights = np.array([1., 0., 1., 0., 1., 1., 1., 1., 1., 0., 1.])
+    bells_neuron.leakage_factor = 1
+    bells_neuron.leakage_period = 1
+    bells_neuron.theta = 0
+    bells_neuron.threshold_pulse = 30
+    bells_neuron.activation_function = BINARY
 
-exit(0)
+    bottle_neuron = createEmptySCTN()
+    bottle_neuron.synapses_weights = np.array([0., 1., 1., 0., 1., 0., 1., 1., 0., 0., 0.])
+    bottle_neuron.leakage_factor = 1
+    bottle_neuron.leakage_period = 1
+    bottle_neuron.theta = 0
+    bottle_neuron.threshold_pulse = 30
+    bottle_neuron.activation_function = BINARY
+
+    buzzer_neuron = createEmptySCTN()
+    buzzer_neuron.synapses_weights = np.array([0., 0., 0., 1., 0., 1., 1., 1., 1., 1., 0.])
+    buzzer_neuron.leakage_factor = 1
+    buzzer_neuron.leakage_period = 1
+    buzzer_neuron.theta = 0
+    buzzer_neuron.threshold_pulse = 30
+    buzzer_neuron.activation_function = BINARY
+
+    network.add_layer(SCTNLayer([bells_neuron, bottle_neuron, buzzer_neuron]), True, True)
+    return network
+
+# bells5 [1. 0. 1. 0. 1. 1. 1. 1. 1. 0. 1.]
+# bottle1 [0. 1. 1. 0. 1. 0. 1. 1. 0. 0. 0.]
+# buzzer [0. 0. 0. 1. 0. 1. 1. 1. 1. 1. 0.]
 

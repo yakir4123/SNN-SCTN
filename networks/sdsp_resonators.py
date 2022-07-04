@@ -34,10 +34,10 @@ def snn_based_resonator_for_learning(frequencies):
     neuron.ca_peak = 1
     neuron.max_weight = 1
     neuron.min_weight = 0
-    neuron.threshold_potentiation_low = 2
-    neuron.threshold_potentiation_high = 9
-    neuron.threshold_depression_low = 2
-    neuron.threshold_depression_high = 9
+    neuron.threshold_potentiation_low = 10
+    neuron.threshold_potentiation_high = 100
+    neuron.threshold_depression_low = 10
+    neuron.threshold_depression_high = 100
     neuron.threshold_potential = 5
     neuron.threshold_weight = 0.5 * (neuron.max_weight - neuron.min_weight)
     neuron.delta_x = 0.0000005 * neuron.max_weight
@@ -52,33 +52,39 @@ def snn_based_resonator_for_learning(frequencies):
 def snn_based_resonator_for_test(frequencies):
     network = snn_based_resonator(frequencies)
     bells_neuron = createEmptySCTN()
-    bells_neuron.synapses_weights = np.array([1., 0., 1., 0., 1., 1., 1., 1., 1., 0., 1.])
+    bells_neuron.synapses_weights = np.array([1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0.])
     bells_neuron.leakage_factor = 1
     bells_neuron.leakage_period = 1
     bells_neuron.theta = 0
-    bells_neuron.threshold_pulse = 30
+    bells_neuron.threshold_pulse = 5
     bells_neuron.activation_function = BINARY
 
     bottle_neuron = createEmptySCTN()
-    bottle_neuron.synapses_weights = np.array([0., 1., 1., 0., 1., 0., 1., 1., 0., 0., 0.])
+    bottle_neuron.synapses_weights = np.array([1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1.])
     bottle_neuron.leakage_factor = 1
     bottle_neuron.leakage_period = 1
     bottle_neuron.theta = 0
-    bottle_neuron.threshold_pulse = 30
+    bottle_neuron.threshold_pulse = 5
     bottle_neuron.activation_function = BINARY
 
     buzzer_neuron = createEmptySCTN()
-    buzzer_neuron.synapses_weights = np.array([0., 0., 0., 1., 0., 1., 1., 1., 1., 1., 0.])
+    buzzer_neuron.synapses_weights = np.array([1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1.])
     buzzer_neuron.leakage_factor = 1
     buzzer_neuron.leakage_period = 1
     buzzer_neuron.theta = 0
-    buzzer_neuron.threshold_pulse = 30
+    buzzer_neuron.threshold_pulse = 5
     buzzer_neuron.activation_function = BINARY
 
     network.add_layer(SCTNLayer([bells_neuron, bottle_neuron, buzzer_neuron]), True, True)
     return network
 
-# bells5 [1. 0. 1. 0. 1. 1. 1. 1. 1. 0. 1.]
-# bottle1 [0. 1. 1. 0. 1. 0. 1. 1. 0. 0. 0.]
-# buzzer [0. 0. 0. 1. 0. 1. 1. 1. 1. 1. 0.]
+# #1 - fail, bells domintate (4n resonator)
+# bells5 [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1.]
+# bottle1 [0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0.]
+# buzzer [0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0.]
+
+# #2 - fail, buzzer domintate (5n resonator)
+# bells5 [1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0.]
+# bottle1 [1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1.]
+# buzzer [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1.]
 

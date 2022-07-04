@@ -76,22 +76,23 @@ def make_neuron_learn(network, audio, samples):
 
         input_to_network(network, data)
 
+
 def learn_neurons(freqs):
     network = snn_based_resonator_for_learning(freqs)
     plot_network(network)
 
-    neuron = network.neurons[55]
+    neuron = network.neurons[66]
     def clear_neuron(neuron_):
         make_neuron_learn(network, None, 0)
         neuron_.synapses_weights = np.random.random(len(neuron_.synapses_weights))
         neuron_.ca = 0
         neuron_.membrane_potential = 0
 
-    make_neuron_learn(network, 'bottle1', 25)
-    print(f'bottle1 {neuron.synapses_weights}')
-    clear_neuron(neuron)
     make_neuron_learn(network, 'bells5', 25)
     print(f'bells5 {neuron.synapses_weights}')
+    clear_neuron(neuron)
+    make_neuron_learn(network, 'bottle1', 25)
+    print(f'bottle1 {neuron.synapses_weights}')
     clear_neuron(neuron)
     make_neuron_learn(network, 'buzzer', 25)
     print(f'buzzer {neuron.synapses_weights}')
@@ -100,13 +101,13 @@ def learn_neurons(freqs):
 
 def test_neurons(freqs, audio):
     network = snn_based_resonator_for_test(freqs)
-    # plot_network(network)
-    network.log_membrane_potential(55)
-    network.log_membrane_potential(56)
-    network.log_membrane_potential(57)
+    plot_network(network)
+    # network.log_membrane_potential(66)
+    # network.log_membrane_potential(67)
+    # network.log_membrane_potential(68)
     success = 0
     count_test = 0
-    for sample in range(25, 100, 100):
+    for sample in range(25, 100):
         count_test += 1
         try:
             audio_file = f'{(sample%1000)//100}{(sample%100)//10}{sample%10}'
@@ -123,21 +124,22 @@ def test_neurons(freqs, audio):
 
         is_success = test_input(network, data) == audio
         success += is_success
-        if not is_success:
-            bells_neuron = network.neurons[55]
-            plt.plot(bells_neuron.membrane_potential_graph[:bells_neuron.index])
-            plt.title(f'bells neuron on {audio}: {audio_file}')
-            plt.show()
-            bottle_neuron = network.neurons[56]
-            plt.plot(bottle_neuron.membrane_potential_graph[:bottle_neuron.index])
-            plt.title(f'bottle neuron on {audio}: {audio_file}')
-            plt.show()
-            buzzer_neuron = network.neurons[57]
-            plt.plot(buzzer_neuron.membrane_potential_graph[:buzzer_neuron.index])
-            plt.title(f'buzzer neuron on {audio}: {audio_file}')
-            plt.show()
+        # if not is_success:
+        #     bells_neuron = network.neurons[66]
+        #     plt.plot(bells_neuron.membrane_potential_graph[:bells_neuron.index])
+        #     plt.title(f'bells neuron on {audio}: {audio_file}')
+        #     plt.show()
+        #     bottle_neuron = network.neurons[67]
+        #     plt.plot(bottle_neuron.membrane_potential_graph[:bottle_neuron.index])
+        #     plt.title(f'bottle neuron on {audio}: {audio_file}')
+        #     plt.show()
+        #     buzzer_neuron = network.neurons[68]
+        #     plt.plot(buzzer_neuron.membrane_potential_graph[:buzzer_neuron.index])
+        #     plt.title(f'buzzer neuron on {audio}: {audio_file}')
+        #     plt.show()
 
     print(f'success rate on {audio} is {success / count_test}')
+
 
 if __name__ == '__main__':
     freqs = [

@@ -22,7 +22,7 @@ def snn_based_resonator(frequencies):
 def snn_based_resonator_for_learning(frequencies):
     network = snn_based_resonator(frequencies)
     neuron = createEmptySCTN()
-    neuron.synapses_weights = np.random.random(len(frequencies))
+    neuron.synapses_weights = np.random.random(len(frequencies)) * 150 - 50
     neuron.leakage_factor = 1
     neuron.leakage_period = 1
     neuron.theta = 0
@@ -31,16 +31,16 @@ def snn_based_resonator_for_learning(frequencies):
 
     # sdsp
     neuron.ca = 0
-    neuron.ca_peak = 1
-    neuron.max_weight = 1
-    neuron.min_weight = 0
+    neuron.ca_peak = 2
+    neuron.max_weight = 100
+    neuron.min_weight = -50
     neuron.threshold_potentiation_low = 10
     neuron.threshold_potentiation_high = 100
     neuron.threshold_depression_low = 10
     neuron.threshold_depression_high = 100
     neuron.threshold_potential = 5
     neuron.threshold_weight = 0.5 * (neuron.max_weight - neuron.min_weight)
-    neuron.delta_x = 0.0000005 * neuron.max_weight
+    neuron.delta_x = 0.000005 * neuron.max_weight
     neuron.shifting_const = 0.00000008 * neuron.max_weight
     neuron.learning = True
 
@@ -87,4 +87,10 @@ def snn_based_resonator_for_test(frequencies):
 # bells5 [1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0.]
 # bottle1 [1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1.]
 # buzzer [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1.]
+
+# #3
+# bells5 [-50, -50, -50, 5.00239736, 4.61461544, 4.83233638, 45.44618154, -33.40211234, 100, 100, 100]
+# bottle1 [-50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50]
+# buzzer [-50, -50, -50, -50, -50, -50, -50, -50, -50, -50, -50]
+
 

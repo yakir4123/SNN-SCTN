@@ -170,14 +170,12 @@ class SCTNeuron:
         return emit_spike
 
     def _learn(self, f, emit_spike):
-        if self.membrane_potential > self.threshold_potential and \
-                self.threshold_potentiation_high > self.ca > self.threshold_potentiation_low:
+        if self.membrane_potential > self.threshold_potential and self.threshold_potentiation_high > self.ca > self.threshold_potentiation_low:
             self.synapses_weights[f == 1] += self.delta_x
-        elif self.membrane_potential < self.threshold_potential and \
-                self.threshold_depression_high > self.ca > self.threshold_depression_low:
+        elif self.membrane_potential < self.threshold_potential and self.threshold_depression_high > self.ca > self.threshold_depression_low:
             self.synapses_weights[f == 1] -= self.delta_x
         self.synapses_weights += self.shifting_const
-        self.synapses_weights[self.synapses_weights <= self.threshold_weight] -= 2 * self.shifting_const
+        self.synapses_weights[self.synapses_weights < self.threshold_weight + self.shifting_const] -= 2 * self.shifting_const
         self.synapses_weights = np.clip(self.synapses_weights, self.min_weight, self.max_weight)
 
         if emit_spike:

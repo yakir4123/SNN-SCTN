@@ -35,8 +35,8 @@ spec = OrderedDict([
     ('threshold_potentiation_high', float32),
 
     ('log_membrane_potential', boolean),
-    ('membrane_potential_graph', float32[:]),
-    ('membrane_potential_graph', float32[:]),
+    ('_membrane_potential_graph', float32[:]),
+    ('membrane_sample_max_window', float32[:]),
     ('log_rand_gauss_var', boolean),
     ('rand_gauss_var_graph', int32[:]),
     ('log_ca', boolean),
@@ -96,8 +96,8 @@ class SCTNeuron:
         self.log_ca = log_ca
         self.log_rand_gauss_var = log_rand_gauss_var
         self.log_out_spikes = log_out_spikes
-        self.membrane_potential_graph = np.zeros(100).astype('float32')
-        self.membrane_window_sample = np.zeros(10000).astype('float32')
+        self._membrane_potential_graph = np.zeros(100).astype('float32')
+        self.membrane_sample_max_window = np.zeros(10000).astype('float32')
         self.ca_graph = np.zeros(100).astype('float32')
         self.out_spikes = np.zeros(100).astype('int8')
         self.rand_gauss_var_graph = np.zeros(100).astype('int32')
@@ -110,10 +110,14 @@ class SCTNeuron:
             self._learn(f, emit_spike)
 
         if self.log_membrane_potential:
-            if self.index == len(self.membrane_potential_graph):
-                self.membrane_potential_graph = np.concatenate((self.membrane_potential_graph,
+            if self.index == len(self._membrane_potential_graph):
+                self._membrane_potential_graph = np.concatenate((self._membrane_potential_graph,
                                                                 np.zeros(self.index).astype('float32')))
-            self.membrane_potential_graph[self.index] = self.membrane_potential
+            sample_window_size = len(self.membrane_sample_max_window)
+            self.membrane_sample_max_window[self.index % sample_window_size] = self.membrane_potential
+            if self.index % sample_window_size == sample_window_size - 1:
+                self._membrane_potential_graph[self.index // sample_window_size] = np.max(np.abs(self.membrane_sample_max_window))
+            # self._membrane_potential_graph[self.index] = self.membrane_potential
         if self.log_rand_gauss_var:
             if self.index == len(self.rand_gauss_var_graph):
                 self.rand_gauss_var_graph = np.concatenate((self.rand_gauss_var_graph,
@@ -218,6 +222,9 @@ class SCTNeuron:
 
     def __hash__(self):
         return self._id
+
+    def membrane_potential_graph(self):
+        return self._membrane_potential_graph[:self.index//len(self.membrane_sample_max_window)]
 
 
 @njit

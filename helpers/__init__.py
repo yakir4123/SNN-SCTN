@@ -71,16 +71,10 @@ def skew_score(arr):
     return score / arr[pivot]
 
 
-def generate_filter(filter_name: str, npts):
-    filter_array = np.load(f'..\\filters\\{filter_name}.npy')
-    filter_array -= np.min(filter_array)
-    filter_array /= np.max(filter_array)
-    x = np.linspace(0, 200, len(filter_array))
-    x -= x[np.argmax(filter_array)]
-    x /= 4 * np.pi
+def generate_sinc_filter(f0: float, start_freq: float, spectrum: float, points: int, lobe_wide: float):
+    x = np.linspace(start_freq, start_freq + spectrum, points)
+    x -= f0
+    x /= lobe_wide
     sinc = np.abs(np.sin(x)/x)
-    sinc[np.argmax(filter_array)] = 1
+    sinc[f0] = 1
     return sinc
-    # interpolated = interp1d(np.arange(len(filter_array)), filter_array, axis=0, fill_value='extrapolate')
-    # downsampled = interpolated(np.linspace(0, len(filter_array), npts))
-    # return downsampled

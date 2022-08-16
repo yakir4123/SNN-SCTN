@@ -30,13 +30,15 @@ def identity_test():
 
 if __name__ == '__main__':
     # freq0 = 2777
-    freq0 = 104
+    freq0 = 10000
     start_freq = 0
     spectrum = 2 * freq0
     step = 1 / 40_000
     # step = 1 / (20 * freq0)
-    LF = 5
-    LP = 72
+    LF = 3
+    LP = 2
+    LF = -1
+    LP = -1
     f_pulse = 1.536 * (10 ** 6)
     # test_size = 1_000_000_000
     test_size = int(spectrum / step)
@@ -45,11 +47,11 @@ if __name__ == '__main__':
     gains = {'th_gain0': 1., 'th_gain1': 1., 'th_gain2': 1., 'th_gain3': 1., 'weight_gain0': 1.1, 'weight_gain1': 0.9,
              'weight_gain2': 1., 'weight_gain3': 1., 'weight_gain4': 1., 'amplitude_gain': 1.0}
     # optimize by filter that generated from the output
-    gains = {'amplitude_gain': 1.9191575383250754, 'th_gain0': 1.558377885188216, 'th_gain1': 0.4399473616072731, 'th_gain2': 1.942422205282769, 'th_gain3': 0.886318156054487, 'weight_gain0': 1.0369400177212895, 'weight_gain1': 0.7858253332474463, 'weight_gain2': 0.5317121663655087, 'weight_gain3': 1.5821842334622558, 'weight_gain4': 1.3666824669559008}
+    # gains = {'amplitude_gain': 1.9191575383250754, 'th_gain0': 1.558377885188216, 'th_gain1': 0.4399473616072731, 'th_gain2': 1.942422205282769, 'th_gain3': 0.886318156054487, 'weight_gain0': 1.0369400177212895, 'weight_gain1': 0.7858253332474463, 'weight_gain2': 0.5317121663655087, 'weight_gain3': 1.5821842334622558, 'weight_gain4': 1.3666824669559008}
     # optimized by sinc that similar to output
-    gains = {'amplitude_gain': 1.7829775835112724, 'th_gain0': 1.4071121141018526, 'th_gain1': 0.8294516945006966, 'th_gain2': 1.9469354488769657, 'th_gain3': 1.5232168416428415, 'weight_gain0': 0.5303565105698702, 'weight_gain1': 0.3503937447731905, 'weight_gain2': 1.11292096340748, 'weight_gain3': 1.6787292645091545, 'weight_gain4': 1.4615273200986583}
+    # gains = {'amplitude_gain': 1.7829775835112724, 'th_gain0': 1.4071121141018526, 'th_gain1': 0.8294516945006966, 'th_gain2': 1.9469354488769657, 'th_gain3': 1.5232168416428415, 'weight_gain0': 0.5303565105698702, 'weight_gain1': 0.3503937447731905, 'weight_gain2': 1.11292096340748, 'weight_gain3': 1.6787292645091545, 'weight_gain4': 1.4615273200986583}
     # optimized by sinc with x4 selectivity
-    gains = {'th_gain0': 1.8161386782814448, 'th_gain1': 1.8602968084187494, 'th_gain2': 0.6268190588650807, 'th_gain3': 1.299188599694053, 'weight_gain0': 1.9750026704790573, 'weight_gain1': 1.0991886375710929, 'weight_gain2': 1.2217313379020527, 'weight_gain3': 0.6376437349785199, 'weight_gain4': 1.0660632874749951, 'amplitude_gain': 1.7380524817896195}
+    # gains = {'th_gain0': 1.8161386782814448, 'th_gain1': 1.8602968084187494, 'th_gain2': 0.6268190588650807, 'th_gain3': 1.299188599694053, 'weight_gain0': 1.9750026704790573, 'weight_gain1': 1.0991886375710929, 'weight_gain2': 1.2217313379020527, 'weight_gain3': 0.6376437349785199, 'weight_gain4': 1.0660632874749951, 'amplitude_gain': 1.7380524817896195}
     th_gains = [gains[f'th_gain{i}'] for i in range(4)]
     weighted_gains = [gains[f'weight_gain{i}'] for i in range(5)]
     my_resonator = OptimizationResonator(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])
@@ -75,7 +77,7 @@ if __name__ == '__main__':
         # plt.axvline(x=freq0, c='red')
         # plt.title(f'neuron {i} spikes')
         # plt.show()
-        membrane = neuron.membrane_potential_graph[:neuron.index]
+        membrane = neuron.membrane_potential_graph()
         y = membrane
         # y = denoise_small_values(np.abs(membrane), 10000)
         # with open('filters/filter_104.npy', 'wb') as filter_file:

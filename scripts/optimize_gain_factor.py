@@ -1,9 +1,8 @@
 import optuna
 import numpy as np
 
-from helpers import denoise_small_values, skew_score, generate_filter
-from snn.resonator import CustomResonator, test_frequency, OptimizationResonator
-from scipy import stats
+from helpers import denoise_small_values, generate_sinc_filter
+from snn.resonator import test_frequency, OptimizationResonator
 
 
 def objective(trial):
@@ -43,25 +42,18 @@ def objective(trial):
     test_frequency(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
 
     neuron = my_resonator.network.neurons[-1]
-    membrane = neuron.membrane_potential_graph[:neuron.index]
+    membrane = neuron.membrane_potential_graph()
     membrane = denoise_small_values(np.abs(membrane), 10000)
     membrane -= np.min(membrane)
     membrane /= np.max(membrane)
+    f_filter = generate_sinc_filter(freq0, start_freq=start_freq, spectrum=spectrum,
+                                    points=len(membrane), lobe_wide=2316)
     return np.sum((f_filter - membrane) ** 2)
-    # convolve = np.convolve(membrane, f_filter, mode='full')
-    # convolve /= np.max(convolve)
-    # argx1 = np.argmax(membrane)
-    # argx2 = np.argmax(convolve)
-    # x1 = np.linspace(start_freq, start_freq + spectrum, len(membrane))
-    # x2 = np.linspace(start_freq, start_freq + spectrum, len(convolve))
-    # return np.max(convolve) * (1 / (1 + np.abs(freq0 - x1[argx1]))) * (1 / (1 + np.abs(freq0 - x2[argx2])))
-    # return stats.skew(membrane)
-    # return skew_score(membrane)
 
 
 if __name__ == '__main__':
     learns = [
-        (104, 5, 72),
+        # (104, 5, 72),
         # (2777, 3, 10),
         # (3395, 3, 8),
         # (4365, 3, 6),
@@ -69,9 +61,9 @@ if __name__ == '__main__':
         # (5555, 2, 10),
         # (6790, 2, 8),
         # (8730, 2, 6),
+        (10185, 2, 3)
         # (12223, 2, 4)
     ]
-    f_filter = generate_filter('filter_104', 0)
     for freq0, LF, LP in learns:
         study_name = f'Study-{freq0}-{LF}-{LP}-sinc025pi'
         storage = "sqlite:///example.db"

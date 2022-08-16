@@ -153,7 +153,6 @@ if __name__ == '__main__':
         (5000, 3, 4),
         (7500, 4, 1),
         (10000, 3, 2),
-        (15000, 3, 1),
         ]
     # learn_neurons(freqs)
     # test_neurons(freqs, 'bells5')

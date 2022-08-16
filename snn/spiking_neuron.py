@@ -36,6 +36,7 @@ spec = OrderedDict([
 
     ('log_membrane_potential', boolean),
     ('membrane_potential_graph', float32[:]),
+    ('membrane_potential_graph', float32[:]),
     ('log_rand_gauss_var', boolean),
     ('rand_gauss_var_graph', int32[:]),
     ('log_ca', boolean),
@@ -96,6 +97,7 @@ class SCTNeuron:
         self.log_rand_gauss_var = log_rand_gauss_var
         self.log_out_spikes = log_out_spikes
         self.membrane_potential_graph = np.zeros(100).astype('float32')
+        self.membrane_window_sample = np.zeros(10000).astype('float32')
         self.ca_graph = np.zeros(100).astype('float32')
         self.out_spikes = np.zeros(100).astype('int8')
         self.rand_gauss_var_graph = np.zeros(100).astype('int32')

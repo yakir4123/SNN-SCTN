@@ -47,24 +47,24 @@ def objective(trial):
     membrane -= np.min(membrane)
     membrane /= np.max(membrane)
     f_filter = generate_sinc_filter(freq0, start_freq=start_freq, spectrum=spectrum,
-                                    points=len(membrane), lobe_wide=2316)
+                                    points=len(membrane), lobe_wide=lobe_wide)
     return np.sum((f_filter - membrane) ** 2)
 
 
 if __name__ == '__main__':
     learns = [
         # (104, 5, 72),
-        # (2777, 3, 10),
+        (2777, 3, 10, 375),
         # (3395, 3, 8),
         # (4365, 3, 6),
         # (6111, 3, 4),
         # (5555, 2, 10),
         # (6790, 2, 8),
         # (8730, 2, 6),
-        (10165, 2, 3)
+        # (10165, 2, 3, None)
         # (12223, 2, 4)
     ]
-    for freq0, LF, LP in learns:
+    for freq0, LF, LP, lobe_wide in learns:
         study_name = f'Study-{freq0}-{LF}-{LP}'
         storage = "sqlite:///example.db"
         storage = "postgresql://xtwngymkocypyq:f2f2531a5d86433246c4384ed2bf99649d4a550fec2bfb0da260e53c6309a32b@ec2-44-205-64-253.compute-1.amazonaws.com:5432/dchq9f00rf7nem"
@@ -75,4 +75,4 @@ if __name__ == '__main__':
                                     load_if_exists=True)
         study.optimize(objective, n_trials=200)
 
-        print(study.best_params)
+        # print(study.best_params)

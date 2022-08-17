@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.ndimage import maximum_filter1d
 
-debug = False
+debug = True
 
 if not debug:
     from numba.experimental import jitclass
@@ -74,7 +74,7 @@ def skew_score(arr):
 def generate_sinc_filter(f0: float, start_freq: float, spectrum: float, points: int, lobe_wide: float):
     x = np.linspace(start_freq, start_freq + spectrum, points)
     x -= f0
-    x /= lobe_wide
+    x /= lobe_wide/np.pi
     sinc = np.abs(np.sin(x)/x)
-    sinc[f0] = 1
+    sinc[np.isnan(sinc)] = 1
     return sinc

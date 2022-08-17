@@ -51,7 +51,7 @@ if __name__ == '__main__':
     # optimized by sinc that similar to output
     # gains = {'amplitude_gain': 1.7829775835112724, 'th_gain0': 1.4071121141018526, 'th_gain1': 0.8294516945006966, 'th_gain2': 1.9469354488769657, 'th_gain3': 1.5232168416428415, 'weight_gain0': 0.5303565105698702, 'weight_gain1': 0.3503937447731905, 'weight_gain2': 1.11292096340748, 'weight_gain3': 1.6787292645091545, 'weight_gain4': 1.4615273200986583}
     # optimized by sinc with x4 selectivity
-    # gains = {'th_gain0': 1.8161386782814448, 'th_gain1': 1.8602968084187494, 'th_gain2': 0.6268190588650807, 'th_gain3': 1.299188599694053, 'weight_gain0': 1.9750026704790573, 'weight_gain1': 1.0991886375710929, 'weight_gain2': 1.2217313379020527, 'weight_gain3': 0.6376437349785199, 'weight_gain4': 1.0660632874749951, 'amplitude_gain': 1.7380524817896195}
+    gains = {'th_gain0': 592.9222706646643, 'th_gain1': 1400.851437352429, 'th_gain2': 1358.7561204544065, 'th_gain3': 980.2766382254583, 'weight_gain0': 464.6234806283957, 'weight_gain1': 1590.0304220019902, 'weight_gain2': 1780.390955702878, 'weight_gain3': 1625.2214203038413, 'weight_gain4': 1926.1096216414492, 'amplitude_gain': 2121.441943519054}
     th_gains = [gains[f'th_gain{i}'] for i in range(4)]
     weighted_gains = [gains[f'weight_gain{i}'] for i in range(5)]
     my_resonator = OptimizationResonator(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])
@@ -62,6 +62,12 @@ if __name__ == '__main__':
     # plot_network(my_resonator.network)
     my_resonator.network.log_membrane_potential(-1)
     # my_resonator.network.log_out_spikes(-1)
+    x = np.linspace(start_freq, start_freq + spectrum, test_size//10000)
+    f_filter = generate_sinc_filter(freq0, start_freq=start_freq, spectrum=spectrum,
+                                    points=test_size//10000, lobe_wide=2316)
+    plt.plot(f_filter)
+    plt.show()
+    exit(1)
     timing(test_frequency)(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
     for i in [-1]:
         neuron = my_resonator.network.neurons[1]
@@ -84,6 +90,12 @@ if __name__ == '__main__':
         #     np.save(filter_file, y)
         x = np.linspace(start_freq, start_freq + spectrum, len(y))
         plt.plot(x, y)
+        f_filter = generate_sinc_filter(freq0, start_freq=start_freq, spectrum=spectrum,
+                                        points=len(membrane), lobe_wide=2316)
+
+        f_filter *= np.max(y) - np.min(y)
+        f_filter += np.min(y)
+        plt.plot(x, f_filter)
         plt.axvline(x=freq0, c='red')
         f = int(freq_of_resonator(f_pulse, LF, LP))
         plt.title(f'neuron {i}, LF = {LF}, LP = {LP}, df = {freq0}, f = {f}')

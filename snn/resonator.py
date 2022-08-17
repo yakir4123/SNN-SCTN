@@ -273,12 +273,18 @@ def input_by_potential(resonator, potential):
 
 @njit
 def test_frequency(resonator, test_size=10_000_000, start_freq=0, step=1/200000, clk_freq=1536000):
-    sine_wave = create_sine_wave(test_size, clk_freq, start_freq, step)
-    for i, sample in enumerate(sine_wave):
-        input_by_potential(resonator, sample)
-        # if 0 <= i < 20:
-        #     print(f'{int(resonator.network.neurons[1].membrane_potential)}')
-        #     print(f'{int(resonator.network.neurons[0].rand_gauss_var)}')
+    batch_size = 50_000
+    while test_size > batch_size:
+        sine_wave = create_sine_wave(batch_size, clk_freq, start_freq, step)
+        for i, sample in enumerate(sine_wave):
+            input_by_potential(resonator, sample)
+        start_freq = sine_wave[-1]
+        test_size -= batch_size
+
+    if test_size > 0:
+        sine_wave = create_sine_wave(test_size, clk_freq, start_freq, step)
+        for i, sample in enumerate(sine_wave):
+            input_by_potential(resonator, sample)
 
 @njit
 def create_sine_wave(test_size, clk_freq, start_freq, step):

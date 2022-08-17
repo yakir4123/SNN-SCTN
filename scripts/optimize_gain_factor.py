@@ -43,7 +43,7 @@ def objective(trial):
 
     neuron = my_resonator.network.neurons[-1]
     membrane = neuron.membrane_potential_graph()
-    membrane = denoise_small_values(np.abs(membrane), 10000)
+    # membrane = denoise_small_values(np.abs(membrane), 10000)
     membrane -= np.min(membrane)
     membrane /= np.max(membrane)
     f_filter = generate_sinc_filter(freq0, start_freq=start_freq, spectrum=spectrum,
@@ -61,17 +61,18 @@ if __name__ == '__main__':
         # (5555, 2, 10),
         # (6790, 2, 8),
         # (8730, 2, 6),
-        (10185, 2, 3)
+        (10165, 2, 3)
         # (12223, 2, 4)
     ]
     for freq0, LF, LP in learns:
-        study_name = f'Study-{freq0}-{LF}-{LP}-sinc025pi'
+        study_name = f'Study-{freq0}-{LF}-{LP}'
         storage = "sqlite:///example.db"
+        storage = "postgresql://xtwngymkocypyq:f2f2531a5d86433246c4384ed2bf99649d4a550fec2bfb0da260e53c6309a32b@ec2-44-205-64-253.compute-1.amazonaws.com:5432/dchq9f00rf7nem"
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
                                     direction='minimize',
                                     load_if_exists=True)
-        study.optimize(objective, n_trials=300)
+        study.optimize(objective, n_trials=200)
 
         print(study.best_params)

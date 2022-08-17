@@ -116,6 +116,7 @@ class SCTNeuron:
             sample_window_size = len(self.membrane_sample_max_window)
             self.membrane_sample_max_window[self.index % sample_window_size] = self.membrane_potential
             if self.index % sample_window_size == sample_window_size - 1:
+                self.membrane_sample_max_window[np.isnan(self.membrane_sample_max_window)] = 0
                 self._membrane_potential_graph[self.index // sample_window_size] = np.max(np.abs(self.membrane_sample_max_window))
             # self._membrane_potential_graph[self.index] = self.membrane_potential
         if self.log_rand_gauss_var:

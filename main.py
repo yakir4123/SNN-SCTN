@@ -37,8 +37,8 @@ if __name__ == '__main__':
     # step = 1 / (20 * freq0)
     LF = 3
     LP = 2
-    LF = -1
-    LP = -1
+    # LF = -1
+    # LP = -1
     f_pulse = 1.536 * (10 ** 6)
     # test_size = 1_000_000_000
     test_size = int(spectrum / step)

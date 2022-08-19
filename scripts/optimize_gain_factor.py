@@ -1,3 +1,4 @@
+import yaml
 import optuna
 import numpy as np
 
@@ -64,15 +65,21 @@ if __name__ == '__main__':
         # (10165, 2, 3, None)
         # (12223, 2, 4)
     ]
+
+    # storage = "sqlite:///example.db"
+    # storage = "postgresql://xtwngymkocypyq:f2f2531a5d86433246c4384ed2bf99649d4a550fec2bfb0da260e53c6309a32b@ec2-44-205-64-253.compute-1.amazonaws.com:5432/dchq9f00rf7nem"
+
+    with open("../secret.yaml", 'r') as stream:
+        secrets = yaml.safe_load(stream)
+
+    storage = f'postgresql://{secrets["USER"]}:{secrets["PASSWORD"]}@{secrets["ENDPOINT"]}:{secrets["PORT"]}/{secrets["DBNAME"]}'
     for freq0, LF, LP, lobe_wide in learns:
         study_name = f'Study-{freq0}-{LF}-{LP}'
-        storage = "sqlite:///example.db"
-        storage = "postgresql://xtwngymkocypyq:f2f2531a5d86433246c4384ed2bf99649d4a550fec2bfb0da260e53c6309a32b@ec2-44-205-64-253.compute-1.amazonaws.com:5432/dchq9f00rf7nem"
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
                                     direction='minimize',
                                     load_if_exists=True)
-        study.optimize(objective, n_trials=200)
+        study.optimize(objective, n_trials=300)
 
         # print(study.best_params)

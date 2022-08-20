@@ -58,7 +58,8 @@ class SCTNeuron:
                  activation_function=2, ca=0, ca_peak=1, threshold_potential=3, max_weight=1, min_weight=0,
                  theta=0, shifting_const=8e-8, threshold_potentiation_high=100, threshold_potentiation_low=10,
                  threshold_depression_high=100, threshold_depression_low=10, delta_x=5e-7, threshold_pulse=0,
-                 identity_const=32767, learning=False, log_membrane_potential=False, log_rand_gauss_var=False, log_ca=False,
+                 identity_const=32767, learning=False, log_membrane_potential=False, log_rand_gauss_var=False,
+                 log_ca=False,
                  log_out_spikes=False, membrane_should_reset=True):
         synapses_weights = synapses_weights.astype(np.float64)
         self.n_synapses = len(synapses_weights)
@@ -118,7 +119,6 @@ class SCTNeuron:
             if self.index % sample_window_size == sample_window_size - 1:
                 self.membrane_sample_max_window[np.isnan(self.membrane_sample_max_window)] = 0
                 self._membrane_potential_graph[self.index // sample_window_size] = np.max(np.abs(self.membrane_sample_max_window))
-            # self._membrane_potential_graph[self.index] = self.membrane_potential
         if self.log_rand_gauss_var:
             if self.index == len(self.rand_gauss_var_graph):
                 self.rand_gauss_var_graph = np.concatenate((self.rand_gauss_var_graph,
@@ -182,7 +182,8 @@ class SCTNeuron:
         elif self.membrane_potential < self.threshold_potential and self.threshold_depression_high > self.ca > self.threshold_depression_low:
             self.synapses_weights[f == 1] -= self.delta_x
         self.synapses_weights += self.shifting_const
-        self.synapses_weights[self.synapses_weights < self.threshold_weight + self.shifting_const] -= 2 * self.shifting_const
+        self.synapses_weights[
+            self.synapses_weights < self.threshold_weight + self.shifting_const] -= 2 * self.shifting_const
         self.synapses_weights = np.clip(self.synapses_weights, self.min_weight, self.max_weight)
 
         if emit_spike:
@@ -193,7 +194,7 @@ class SCTNeuron:
     def _activation_function_identity(self):
         const = self.identity_const
         c = self.membrane_potential + const
-        m = 2*(self.identity_const + 1)
+        m = 2 * (self.identity_const + 1)
 
         if self.membrane_potential > const:
             emit_spike = 1
@@ -225,7 +226,8 @@ class SCTNeuron:
         return self._id
 
     def membrane_potential_graph(self):
-        return self._membrane_potential_graph[:self.index//len(self.membrane_sample_max_window)]
+        return self._membrane_potential_graph[:self.index]
+        # return self._membrane_potential_graph[:self.index // len(self.membrane_sample_max_window)]
 
 
 @njit

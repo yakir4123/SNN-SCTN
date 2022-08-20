@@ -10,6 +10,8 @@ def objective(trial):
     gain_factor = 9344 / ((2 ** (2 * LF - 3)) * (1 + LP))
     min_gain = 0.2 * gain_factor
     max_gain = 2 * gain_factor
+    # min_gain = gain_factor
+    # max_gain = gain_factor
     theta_gain = (
         trial.suggest_float('th_gain0', min_gain, max_gain),
         trial.suggest_float('th_gain1', min_gain, max_gain),
@@ -17,8 +19,8 @@ def objective(trial):
         trial.suggest_float('th_gain3', min_gain, max_gain)
     )
     weight_gain = (
-        trial.suggest_float('weight_gain0', min_gain, max_gain),
-        trial.suggest_float('weight_gain1', min_gain, max_gain),
+        trial.suggest_float('weight_gain0', min_gain, max_gain) * 1.1,
+        trial.suggest_float('weight_gain1', min_gain, max_gain) * 0.9,
         trial.suggest_float('weight_gain2', min_gain, max_gain),
         trial.suggest_float('weight_gain3', min_gain, max_gain),
         trial.suggest_float('weight_gain4', min_gain, max_gain)

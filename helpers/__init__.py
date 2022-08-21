@@ -78,3 +78,14 @@ def generate_sinc_filter(f0: float, start_freq: float, spectrum: float, points: 
     sinc = np.abs(np.sin(x)/x)
     sinc[np.isnan(sinc)] = 1
     return sinc
+
+
+def generate_filter(*args, **kwargs):
+    return np.load('../filters/filter_2777.npy')
+    # return generate_sinc_filter(*args, **kwargs)
+
+
+def oversample(filter_array, npts):
+    interpolated = interp1d(np.arange(len(filter_array)), filter_array, axis=0, fill_value='extrapolate')
+    oversampled = interpolated(np.linspace(0, len(filter_array), npts))
+    return oversampled

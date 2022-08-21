@@ -1,8 +1,9 @@
 import yaml
 import optuna
 import numpy as np
+from optuna.samplers import CmaEsSampler
 
-from helpers import denoise_small_values, generate_sinc_filter
+from helpers import denoise_small_values, generate_sinc_filter, generate_filter, oversample
 from snn.resonator import test_frequency, OptimizationResonator
 
 
@@ -19,8 +20,8 @@ def objective(trial):
         trial.suggest_float('th_gain3', min_gain, max_gain)
     )
     weight_gain = (
-        trial.suggest_float('weight_gain0', min_gain, max_gain) * 1.1,
-        trial.suggest_float('weight_gain1', min_gain, max_gain) * 0.9,
+        trial.suggest_float('weight_gain0', min_gain, max_gain),
+        trial.suggest_float('weight_gain1', min_gain, max_gain),
         trial.suggest_float('weight_gain2', min_gain, max_gain),
         trial.suggest_float('weight_gain3', min_gain, max_gain),
         trial.suggest_float('weight_gain4', min_gain, max_gain)
@@ -31,8 +32,8 @@ def objective(trial):
     # amplitude_gain = 1.
     start_freq = 0
     f_pulse = 1.536 * (10 ** 6)
-    step = 1 / 40_000
     spectrum = 2 * freq0
+    step = 1 / spectrum
     test_size = int(spectrum / step)
     my_resonator = OptimizationResonator(freq0,
                                          f_pulse,
@@ -48,16 +49,22 @@ def objective(trial):
     membrane = neuron.membrane_potential_graph()
     # membrane = denoise_small_values(np.abs(membrane), 10000)
     membrane -= np.min(membrane)
-    membrane /= np.max(membrane)
-    f_filter = generate_sinc_filter(freq0, start_freq=start_freq, spectrum=spectrum,
-                                    points=len(membrane), lobe_wide=lobe_wide)
-    return np.sum((f_filter - membrane) ** 2)
+    max_membrane = np.max(membrane)
+    if max_membrane == 0:
+        return 99999
+    membrane /= max_membrane
+
+    f_filter = generate_filter(freq0, start_freq=start_freq, spectrum=spectrum,
+                               points=len(membrane), lobe_wide=lobe_wide)
+    f_filter = oversample(f_filter, len(membrane))
+    res = np.sum((f_filter - membrane) ** 2)
+    return res
 
 
 if __name__ == '__main__':
     learns = [
         # (104, 5, 72),
-        (2777, 3, 10, 375),
+        (2777, 3, 10, 600),
         # (3395, 3, 8),
         # (4365, 3, 6),
         # (6111, 3, 4),
@@ -76,12 +83,13 @@ if __name__ == '__main__':
 
     storage = f'postgresql://{secrets["USER"]}:{secrets["PASSWORD"]}@{secrets["ENDPOINT"]}:{secrets["PORT"]}/{secrets["DBNAME"]}'
     for freq0, LF, LP, lobe_wide in learns:
-        study_name = f'Study-{freq0}-{LF}-{LP}'
+        study_name = f'Study3-{freq0}-{LF}-{LP}-{lobe_wide}'
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
+                                    sampler=CmaEsSampler(seed=42),
                                     direction='minimize',
                                     load_if_exists=True)
         study.optimize(objective, n_trials=300)
 
-        # print(study.best_params)
+        print(study.best_params)

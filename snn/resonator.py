@@ -21,9 +21,10 @@ class Resonator:
         LF, LP = _desired_freq0_parameter(freq0, f_pulse)
         # LF, LP = 6, 36
         self.freq0 = freq0
-        self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
-        print(f'freq = {int(freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor * 100000000)}/100000000')
-        self.gain_factor = int(self.gain_factor*100000000)/100000000
+        self.gain_factor = np.double(9344 / ((2 ** (2 * LF - 3)) * (1 + LP)))
+        print(
+            f'freq = {int(freq_of_resonator(f_pulse, LF, LP))} with LF={LF}, LP={LP}, gain_factor={int(self.gain_factor * 100000000)}/100000000')
+        self.gain_factor = int(self.gain_factor * 100000000) / 100000000
         self.network = SpikingNetwork()
         self.network.add_amplitude(1000 * self.gain_factor)
         neuron = createEmptySCTN()
@@ -139,7 +140,7 @@ class CustomResonator:
         if LF == -1 or LP == -1:
             LF, LP = _desired_freq0_parameter(freq0, f_pulse)
         self.freq0 = freq0
-        self.gain_factor = np.double(9344 / ((2**(2*LF-3))*(1+LP)))
+        self.gain_factor = np.double(9344 / ((2 ** (2 * LF - 3)) * (1 + LP)))
         if theta_gain == -1:
             self.theta_gain = self.gain_factor
         else:
@@ -272,30 +273,30 @@ def input_by_potential(resonator, potential):
 
 
 @njit
-def test_frequency(resonator, test_size=10_000_000, start_freq=0, step=1/200000, clk_freq=1536000):
-    batch_size = 50_000
-    while test_size > batch_size:
-        sine_wave = create_sine_wave(batch_size, clk_freq, start_freq, step)
-        for i, sample in enumerate(sine_wave):
-            input_by_potential(resonator, sample)
-        start_freq = sine_wave[-1]
-        test_size -= batch_size
+def test_frequency(resonator, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000):
 
-    if test_size > 0:
-        sine_wave = create_sine_wave(test_size, clk_freq, start_freq, step)
+    batch_size = 50_000
+    shift = 0
+    while test_size > 0:
+        sine_size = min(batch_size, test_size)
+        sine_wave, freqs = create_sine_wave(sine_size, clk_freq, start_freq, step, shift)
         for i, sample in enumerate(sine_wave):
             input_by_potential(resonator, sample)
+        shift = freqs[-1]
+        start_freq += sine_size * step
+        test_size -= sine_size
+
 
 @njit
-def create_sine_wave(test_size, clk_freq, start_freq, step):
+def create_sine_wave(test_size, clk_freq, start_freq, step, shift):
     sine_wave = (np.arange(test_size) * step + start_freq + step)
     sine_wave = sine_wave * 2 * np.pi / clk_freq
-    sine_wave = np.cumsum(sine_wave)  # phase
-    return np.sin(sine_wave)
+    sine_wave = np.cumsum(sine_wave) + shift  # phase
+    return np.sin(sine_wave), sine_wave
 
 
 @njit
-def freq_of_resonator(f_pulse, LF, LP):
+def freq_of_resonator(f_pulse,  LF, LP):
     return f_pulse / ((2 ** LF) * 2 * np.pi * (1 + LP))
 
 
@@ -325,4 +326,3 @@ def _desired_freq0_parameter(freq0, f_pulse):
     lf = lf_lp_options[lp][0]
     lp = lf_lp_options[lp][1]
     return int(lf), int(lp)
-

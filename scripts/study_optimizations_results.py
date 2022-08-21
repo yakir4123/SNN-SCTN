@@ -1,13 +1,14 @@
 import numpy as np
 import optuna
+import yaml
 from matplotlib import pyplot as plt
 
 from snn.resonator import freq_of_resonator, test_frequency, CustomResonator
 
 if __name__ == '__main__':
     learns = [
-        (104, 5, 72),
-        # (2777, 3, 10),
+        # (104, 5, 72),
+        (2777, 3, 10, 375),
         # (3395, 3, 8),
         # (4365, 3, 6),
         # (6111, 3, 4),
@@ -18,15 +19,17 @@ if __name__ == '__main__':
     ]
     start_freq = 0
     f_pulse = 1.536 * (10 ** 6)
-    for freq0, LF, LP in learns:
-        study_name = f'Study-{freq0}-{LF}-{LP}'
-        storage = "sqlite:///example.db"
+    with open("../secret.yaml", 'r') as stream:
+        secrets = yaml.safe_load(stream)
+
+    storage = f'postgresql://{secrets["USER"]}:{secrets["PASSWORD"]}@{secrets["ENDPOINT"]}:{secrets["PORT"]}/{secrets["DBNAME"]}'
+
+    for freq0, LF, LP, lobe_wide in learns:
+        study_name = f'Study-{freq0}-{LF}-{LP}-{lobe_wide}'
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
                                     load_if_exists=True)
-        study.op
-
-        # gains = study.best_params
+        print(study.best_params)
         # spectrum = 2 * freq0
         # # step = 1 / (test_size // spectrum)
         # step = 1 / (40_000)

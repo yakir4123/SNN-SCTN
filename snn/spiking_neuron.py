@@ -111,10 +111,11 @@ class SCTNeuron:
             self._learn(f, emit_spike)
 
         if self.log_membrane_potential:
-            if self.index == len(self._membrane_potential_graph):
-                self._membrane_potential_graph = np.concatenate((self._membrane_potential_graph,
-                                                                np.zeros(self.index).astype('float32')))
             sample_window_size = len(self.membrane_sample_max_window)
+            if self.index // sample_window_size == len(self._membrane_potential_graph):
+                self._membrane_potential_graph = np.concatenate((self._membrane_potential_graph,
+                                                                np.zeros(self.index // sample_window_size).astype('float32')))
+
             self.membrane_sample_max_window[self.index % sample_window_size] = self.membrane_potential
             if self.index % sample_window_size == sample_window_size - 1:
                 self.membrane_sample_max_window[np.isnan(self.membrane_sample_max_window)] = 0
@@ -226,8 +227,7 @@ class SCTNeuron:
         return self._id
 
     def membrane_potential_graph(self):
-        return self._membrane_potential_graph[:self.index]
-        # return self._membrane_potential_graph[:self.index // len(self.membrane_sample_max_window)]
+        return self._membrane_potential_graph[:self.index // len(self.membrane_sample_max_window)]
 
 
 @njit

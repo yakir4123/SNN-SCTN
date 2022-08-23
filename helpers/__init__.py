@@ -71,9 +71,9 @@ def skew_score(arr):
     return score / arr[pivot]
 
 
-def generate_filter(points, *args, **kwargs):
-    # return oversample(np.load('../filters/filter_2777.npy'), points)
-    return generate_sinc_filter(*args, **kwargs, points=points)
+def generate_filter(*args, **kwargs):
+    # return oversample(np.load('../filters/filter_2777.npy'), points=kwargs['points'])
+    return generate_sinc_filter(*args, **kwargs)
 
 
 def generate_sinc_filter(f0: float, start_freq: float, spectrum: float, points: int, lobe_wide: float):

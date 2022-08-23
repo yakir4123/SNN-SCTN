@@ -1,16 +1,17 @@
 import json
+from copy import copy
 
 import yaml
 import optuna
 import numpy as np
-from optuna.samplers import CmaEsSampler
+from optuna.samplers import CmaEsSampler, TPESampler
 
 from helpers import denoise_small_values, generate_sinc_filter, generate_filter, oversample
 from snn.resonator import test_frequency, OptimizationResonator, lf_lp_options
 
 
 def objective(trial):
-    LF, LP, f_resonator = _lf_lp_options[trial.suggest_float('lf_lp_option', 0, len(_lf_lp_options))]
+    LF, LP, f_resonator = _lf_lp_options[trial.suggest_int('lf_lp_option', 0, len(_lf_lp_options)-1)]
     gain_factor = 9344 / ((2 ** (2 * LF - 3)) * (1 + LP))
     min_gain = 0.2 * gain_factor
     max_gain = 2 * gain_factor
@@ -90,19 +91,22 @@ if __name__ == '__main__':
         _lf_lp_options_indices = abs(_lf_lp_options[:, 2] - freq0) / freq0 < 0.1
         _lf_lp_options = _lf_lp_options[_lf_lp_options_indices]
 
-        study_name = f'Study-{freq0}'
+        study_name = f'Study0-{freq0}'
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
-                                    sampler=CmaEsSampler(seed=42),
+                                    sampler=TPESampler(seed=42),
                                     direction='minimize',
                                     load_if_exists=True)
-        study.optimize(objective, n_trials=100)
+
+        if freq0 > 118.0:
+            study.optimize(objective, n_trials=75)
 
         with open(f"../filters/parameters/f_{freq0}.json", 'w') as best_params_f:
-            LF, LP, f_resonator = _lf_lp_options[study.best_params['lf_lp_option']]
-            study.best_param['LF'] = LF
-            study.best_param['LP'] = LP
-            study.best_param['f_resonator'] = f_resonator
+            res = copy(study.best_params)
+            LF, LP, f_resonator = _lf_lp_options[res['lf_lp_option']]
+            res['LF'] = LF
+            res['LP'] = LP
+            res['f_resonator'] = f_resonator
 
-            json.dump(study.best_params, best_params_f, indent=4)
+            json.dump(res, best_params_f, indent=4)

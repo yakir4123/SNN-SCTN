@@ -4,7 +4,7 @@ from scipy import stats
 from helpers import *
 from helpers.graphs import plot_network
 from snn.resonator import test_frequency, freq_of_resonator, \
-    CustomResonator, OptimizationResonator
+    CustomResonator, OptimizationResonator, suggest_lf_lp, lf_lp_options
 from snn.spiking_neuron import IDENTITY, createEmptySCTN
 
 
@@ -29,14 +29,17 @@ def identity_test():
 
 
 if __name__ == '__main__':
-    freq0 = 2777
-    LF = 3
-    LP = 10
+    freq0 = 2546
+    LF = 4
+    LP = 5
 
     start_freq = 0
     spectrum = 2 * freq0
-    step = 1 / 40_000
+    step = 1 / 10_000
     f_pulse = 1.536 * (10 ** 6)
+    _lf_lp_options = lf_lp_options(freq0, f_pulse)
+    _lf_lp_options_indices = abs(_lf_lp_options[:, 2] - freq0) / freq0 < 0.1
+    _lf_lp_options = _lf_lp_options[_lf_lp_options_indices]
     test_size = int(spectrum / step)
 
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
@@ -46,7 +49,7 @@ if __name__ == '__main__':
              'weight_gain2': gain_factor, 'weight_gain3': gain_factor, 'weight_gain4': gain_factor,
              'amplitude_gain': gain_factor}
     # optimize by filter that generated from the output
-    gains = {'th_gain0': 181.87251160487887, 'th_gain1': 27.928785957829085, 'th_gain2': 92.84350454311262, 'th_gain3': 202.3092428465408, 'weight_gain0': 65.24512144109501, 'weight_gain1': 62.49482329934872, 'weight_gain2': 154.37826839653175, 'weight_gain3': 102.44466843729042, 'weight_gain4': 124.80108396000935, 'amplitude_gain': 196.65021930044932}
+    # gains = {'th_gain0': 181.87251160487887, 'th_gain1': 27.928785957829085, 'th_gain2': 92.84350454311262, 'th_gain3': 202.3092428465408, 'weight_gain0': 65.24512144109501, 'weight_gain1': 62.49482329934872, 'weight_gain2': 154.37826839653175, 'weight_gain3': 102.44466843729042, 'weight_gain4': 124.80108396000935, 'amplitude_gain': 196.65021930044932}
     th_gains = [gains[f'th_gain{i}'] for i in range(4)]
     weighted_gains = [gains[f'weight_gain{i}'] for i in range(5)]
     my_resonator = OptimizationResonator(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])

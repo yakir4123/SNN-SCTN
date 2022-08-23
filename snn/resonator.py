@@ -18,7 +18,7 @@ from snn.spiking_neuron import SCTNeuron, IDENTITY, createEmptySCTN, BINARY, SIG
 class Resonator:
 
     def __init__(self, freq0, f_pulse):
-        LF, LP = _desired_freq0_parameter(freq0, f_pulse)
+        LF, LP = suggest_lf_lp(freq0, f_pulse)
         # LF, LP = 6, 36
         self.freq0 = freq0
         self.gain_factor = np.double(9344 / ((2 ** (2 * LF - 3)) * (1 + LP)))
@@ -138,7 +138,7 @@ class CustomResonator:
                  weight_gain,
                  amplitude_gain):
         if LF == -1 or LP == -1:
-            LF, LP = _desired_freq0_parameter(freq0, f_pulse)
+            LF, LP = suggest_lf_lp(freq0, f_pulse)
         self.freq0 = freq0
         self.gain_factor = np.double(9344 / ((2 ** (2 * LF - 3)) * (1 + LP)))
         if theta_gain == -1:
@@ -214,7 +214,7 @@ class OptimizationResonator:
                  weight_gain,
                  amplitude_gain):
         if LF == -1 or LP == -1:
-            LF, LP = _desired_freq0_parameter(freq0, f_pulse)
+            LF, LP = suggest_lf_lp(freq0, f_pulse)
         self.freq0 = freq0
 
         self.network = SpikingNetwork()
@@ -301,7 +301,7 @@ def freq_of_resonator(f_pulse,  LF, LP):
 
 
 @njit
-def _desired_freq0_parameter(freq0, f_pulse):
+def lf_lp_options(freq0, f_pulse):
     x = np.arange(0, 8)
     y = np.arange(300)
     freqs_options = np.zeros((len(x), len(y)))
@@ -310,12 +310,19 @@ def _desired_freq0_parameter(freq0, f_pulse):
     freqs_options[:, 0] = 0
     # find the parameter that will give the closest frequency as the desired frequency
     indices = np.argmin(np.abs(freqs_options - freq0), axis=1)
-    lf_lp_options = np.array(list(zip(x, indices)))
-    best_lp_option = np.array([freqs_options[int(opt[0]), int(opt[1])] for opt in lf_lp_options])
-    print_options = np.zeros((8, 3))
-    print_options[:, :2] = lf_lp_options
-    print_options[:, 2] = best_lp_option
-    print(print_options.astype(np.int32))
+    all_lf_lp_options = np.array(list(zip(x, indices)))
+    best_lp_option = np.array([freqs_options[int(opt[0]), int(opt[1])] for opt in all_lf_lp_options])
+    res = np.zeros((8, 3))
+    res[:, :2] = all_lf_lp_options
+    res[:, 2] = best_lp_option
+    return res
+
+
+@njit
+def suggest_lf_lp(freq0, f_pulse):
+    _lf_lp_options = lf_lp_options(freq0, f_pulse)
+    all_lf_lp_options = _lf_lp_options[:, :2]
+    best_lp_option = _lf_lp_options[:, 2]
     serach_best_lp_option = np.abs(freq0 - best_lp_option) / freq0
     serach_best_lp_option = serach_best_lp_option < 0.05
     serach_best_lp_option = serach_best_lp_option[::-1]
@@ -323,6 +330,12 @@ def _desired_freq0_parameter(freq0, f_pulse):
         lp = len(serach_best_lp_option) - np.argmax(serach_best_lp_option) - 1
     else:
         lp = np.argmin(np.abs(freq0 - best_lp_option))
-    lf = lf_lp_options[lp][0]
-    lp = lf_lp_options[lp][1]
+    lf = all_lf_lp_options[lp][0]
+    lp = all_lf_lp_options[lp][1]
     return int(lf), int(lp)
+
+
+def print_lf_lp_options(freq0, f_pulse):
+    print(lf_lp_options(freq0, f_pulse))
+
+

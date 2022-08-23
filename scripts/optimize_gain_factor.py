@@ -1,18 +1,20 @@
+import json
+
 import yaml
 import optuna
 import numpy as np
 from optuna.samplers import CmaEsSampler
 
 from helpers import denoise_small_values, generate_sinc_filter, generate_filter, oversample
-from snn.resonator import test_frequency, OptimizationResonator
+from snn.resonator import test_frequency, OptimizationResonator, lf_lp_options
 
 
 def objective(trial):
+    LF, LP, f_resonator = _lf_lp_options[trial.suggest_float('lf_lp_option', 0, len(_lf_lp_options))]
     gain_factor = 9344 / ((2 ** (2 * LF - 3)) * (1 + LP))
     min_gain = 0.2 * gain_factor
     max_gain = 2 * gain_factor
-    # min_gain = gain_factor
-    # max_gain = gain_factor
+
     theta_gain = (
         trial.suggest_float('th_gain0', min_gain, max_gain),
         trial.suggest_float('th_gain1', min_gain, max_gain),
@@ -30,10 +32,8 @@ def objective(trial):
     # weight_gain = 1.1, 0.9, 1., 1., 1.
     # theta_gain = 1., 1., 1., 1.
     # amplitude_gain = 1.
-    start_freq = 0
-    f_pulse = 1.536 * (10 ** 6)
     spectrum = 2 * freq0
-    step = 1 / spectrum
+    step = 1 / 10_000
     test_size = int(spectrum / step)
     my_resonator = OptimizationResonator(freq0,
                                          f_pulse,
@@ -54,17 +54,19 @@ def objective(trial):
         return 99999
     membrane /= max_membrane
 
-    f_filter = generate_filter(freq0, start_freq=start_freq, spectrum=spectrum,
-                               points=len(membrane), lobe_wide=lobe_wide)
-    f_filter = oversample(f_filter, len(membrane))
+    f_filter = generate_filter(f_resonator, start_freq=start_freq, spectrum=spectrum,
+                               points=len(membrane), lobe_wide=0.125 * f_resonator)
     res = np.sum((f_filter - membrane) ** 2)
     return res
 
 
 if __name__ == '__main__':
-    learns = [
+    start_freq = 0
+    f_pulse = 1.536 * (10 ** 6)
+    learns = [100 * (1.18 ** i) for i in range(25)]
+    # learns = [
         # (104, 5, 72),
-        (2777, 3, 10, 600),
+        # (2777, 3, 10, 600),
         # (3395, 3, 8),
         # (4365, 3, 6),
         # (6111, 3, 4),
@@ -73,7 +75,7 @@ if __name__ == '__main__':
         # (8730, 2, 6),
         # (10165, 2, 3, None)
         # (12223, 2, 4)
-    ]
+    # ]
 
     # storage = "sqlite:///example.db"
     # storage = "postgresql://xtwngymkocypyq:f2f2531a5d86433246c4384ed2bf99649d4a550fec2bfb0da260e53c6309a32b@ec2-44-205-64-253.compute-1.amazonaws.com:5432/dchq9f00rf7nem"
@@ -82,14 +84,25 @@ if __name__ == '__main__':
         secrets = yaml.safe_load(stream)
 
     storage = f'postgresql://{secrets["USER"]}:{secrets["PASSWORD"]}@{secrets["ENDPOINT"]}:{secrets["PORT"]}/{secrets["DBNAME"]}'
-    for freq0, LF, LP, lobe_wide in learns:
-        study_name = f'Study3-{freq0}-{LF}-{LP}-{lobe_wide}'
+    # for freq0, LF, LP, lobe_wide in learns:
+    for freq0 in learns:
+        _lf_lp_options = lf_lp_options(freq0, f_pulse)
+        _lf_lp_options_indices = abs(_lf_lp_options[:, 2] - freq0) / freq0 < 0.1
+        _lf_lp_options = _lf_lp_options[_lf_lp_options_indices]
+
+        study_name = f'Study-{freq0}'
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
                                     sampler=CmaEsSampler(seed=42),
                                     direction='minimize',
                                     load_if_exists=True)
-        study.optimize(objective, n_trials=300)
+        study.optimize(objective, n_trials=100)
 
-        print(study.best_params)
+        with open(f"../filters/parameters/f_{freq0}.json", 'w') as best_params_f:
+            LF, LP, f_resonator = _lf_lp_options[study.best_params['lf_lp_option']]
+            study.best_param['LF'] = LF
+            study.best_param['LP'] = LP
+            study.best_param['f_resonator'] = f_resonator
+
+            json.dump(study.best_params, best_params_f, indent=4)

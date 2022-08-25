@@ -43,14 +43,19 @@ else:
     numbaListType = lambda _type: List[_type]
 
 
-def timing(f):
+def timing(f, return_res=True, return_time=False):
     @wraps(f)
     def wrap(*args, **kw):
         ts = time.time()
         result = f(*args, **kw)
         te = time.time()
         print(f'func:{f.__name__} args:({args}, {kw}] took: {te - ts:2.4f} sec')
-        return result
+        if return_res and return_time:
+            return result, te - ts
+        if return_res:
+            return result
+        if return_time:
+            return te - ts
 
     return wrap
 

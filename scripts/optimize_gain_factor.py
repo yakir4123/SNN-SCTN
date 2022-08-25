@@ -64,7 +64,7 @@ def objective(trial):
 if __name__ == '__main__':
     start_freq = 0
     f_pulse = 1.536 * (10 ** 6)
-    learns = [100 * (1.18 ** i) for i in range(25)]
+    learns = [100 * (1.18 ** i) for i in range(25, 29)]
     # learns = [
         # (104, 5, 72),
         # (2777, 3, 10, 600),
@@ -99,10 +99,9 @@ if __name__ == '__main__':
                                     direction='minimize',
                                     load_if_exists=True)
 
-        if freq0 > 118.0:
-            study.optimize(objective, n_trials=75)
+        study.optimize(objective, n_trials=75)
 
-        with open(f"../filters/parameters/f_{freq0}.json", 'w') as best_params_f:
+        with open(f"../filters/parameters/f_{int(freq0)}.json", 'w') as best_params_f:
             res = copy(study.best_params)
             LF, LP, f_resonator = _lf_lp_options[res['lf_lp_option']]
             res['LF'] = LF
@@ -110,3 +109,4 @@ if __name__ == '__main__':
             res['f_resonator'] = f_resonator
 
             json.dump(res, best_params_f, indent=4)
+    print('Done!')

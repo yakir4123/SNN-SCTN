@@ -1,12 +1,8 @@
 import json
 
-import numpy as np
 import optuna
 import yaml
 from optuna.samplers import CmaEsSampler
-from scipy import stats
-from os import listdir
-from os.path import isfile, join
 
 from helpers import *
 from helpers.graphs import plot_network
@@ -73,6 +69,8 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
 
 
 def manual_parameters_plot():
+    if LF == -1 or LP == -1:
+        print(lf_lp_options(freq0=freq0, f_pulse=f_pulse))
     gain_factor = 9344 / ((2 ** (2 * LF - 3)) * (1 + LP))
     gains = {'th_gain0': gain_factor, 'th_gain1': gain_factor, 'th_gain2': gain_factor, 'th_gain3': gain_factor,
              'weight_gain0': gain_factor * 1.1, 'weight_gain1': gain_factor * 0.9,
@@ -110,7 +108,7 @@ def from_filter_json_plot(freq0):
 
 
 def plot_all_filters_json():
-    filters_files = [int(100 * (1.18 ** i)) for i in range(0, 20)]
+    filters_files = [int(100 * (1.18 ** i)) for i in range(20, 27)]
     for freq0 in filters_files:
         with open(f'filters/parameters/f_{freq0}.json') as f:
            parameters = json.load(f)
@@ -121,21 +119,21 @@ def plot_all_filters_json():
 
 
 if __name__ == '__main__':
-    freq0 = 104
-    LF = 5
-    LP = 72
+    freq0 = 10
+    LF = 9
+    LP = 48
 
     start_freq = 0
-    spectrum = 2 * freq0
+    spectrum = 100
     step = 1 / 40_000
     f_pulse = 1.536 * (10 ** 6)
     test_size = int(spectrum / step)
 
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
-    # manual_parameters_plot()
+    manual_parameters_plot()
     # optuna_study_plot(f'Study0-{100 * (1.18 ** 0)}', freq0)
-    from_filter_json_plot(freq0=2739)
-    from_filter_json_plot(freq0=3232)
-    #plot_all_filters_json()
+    # from_filter_json_plot(freq0=2739)
+    # from_filter_json_plot(freq0=3232)
+    # plot_all_filters_json()
 
     print("Nice")

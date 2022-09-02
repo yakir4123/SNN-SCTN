@@ -65,6 +65,7 @@ if __name__ == '__main__':
     start_freq = 0
     f_pulse = 1.536 * (10 ** 6)
     learns = [100 * (1.18 ** i) for i in range(25, 29)]
+    learns = [10 * (i + 1) for i in range(10)]
     # learns = [
         # (104, 5, 72),
         # (2777, 3, 10, 600),

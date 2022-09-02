@@ -302,8 +302,8 @@ def freq_of_resonator(f_pulse,  LF, LP):
 
 @njit
 def lf_lp_options(freq0, f_pulse):
-    x = np.arange(0, 8)
-    y = np.arange(300)
+    x = np.arange(0, 10)
+    y = np.arange(400)
     freqs_options = np.zeros((len(x), len(y)))
     for i in range(3, len(x)):
         freqs_options[i, :] = freq_of_resonator(f_pulse, i, y)
@@ -312,7 +312,7 @@ def lf_lp_options(freq0, f_pulse):
     indices = np.argmin(np.abs(freqs_options - freq0), axis=1)
     all_lf_lp_options = np.array(list(zip(x, indices)))
     best_lp_option = np.array([freqs_options[int(opt[0]), int(opt[1])] for opt in all_lf_lp_options])
-    res = np.zeros((8, 3))
+    res = np.zeros((len(best_lp_option), 3))
     res[:, :2] = all_lf_lp_options
     res[:, 2] = best_lp_option
     return res

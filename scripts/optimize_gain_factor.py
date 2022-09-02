@@ -33,8 +33,8 @@ def objective(trial):
     # weight_gain = 1.1, 0.9, 1., 1., 1.
     # theta_gain = 1., 1., 1., 1.
     # amplitude_gain = 1.
-    spectrum = 2 * freq0
-    step = 1 / 10_000
+    spectrum = 200
+    step = 1 / 50_000
     test_size = int(spectrum / step)
     my_resonator = OptimizationResonator(freq0,
                                          f_pulse,
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     start_freq = 0
     f_pulse = 1.536 * (10 ** 6)
     learns = [100 * (1.18 ** i) for i in range(25, 29)]
-    learns = [10 * (i + 1) for i in range(10)]
+    learns = [10 * (i + 1) for i in range(9)]
     # learns = [
         # (104, 5, 72),
         # (2777, 3, 10, 600),
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         _lf_lp_options_indices = abs(_lf_lp_options[:, 2] - freq0) / freq0 < 0.1
         _lf_lp_options = _lf_lp_options[_lf_lp_options_indices]
 
-        study_name = f'Study0-{freq0}'
+        study_name = f'Study-{freq0}'
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,

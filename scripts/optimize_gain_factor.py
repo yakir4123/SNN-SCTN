@@ -63,36 +63,20 @@ def objective(trial):
 
 if __name__ == '__main__':
     start_freq = 0
-    f_pulse = 1.536 * (10 ** 6)
-    learns = [100 * (1.18 ** i) for i in range(25, 29)]
-    learns = [10 * (i + 1) for i in range(9)]
-    # learns = [
-        # (104, 5, 72),
-        # (2777, 3, 10, 600),
-        # (3395, 3, 8),
-        # (4365, 3, 6),
-        # (6111, 3, 4),
-        # (5555, 2, 10),
-        # (6790, 2, 8),
-        # (8730, 2, 6),
-        # (10165, 2, 3, None)
-        # (12223, 2, 4)
-    # ]
-
-    # storage = "sqlite:///example.db"
-    # storage = "postgresql://xtwngymkocypyq:f2f2531a5d86433246c4384ed2bf99649d4a550fec2bfb0da260e53c6309a32b@ec2-44-205-64-253.compute-1.amazonaws.com:5432/dchq9f00rf7nem"
+    f_pulse = 1.536 * (10 ** 6) // 10
+    # learns = [100 * (1.18 ** i) for i in range(25, 29)]
+    learns = [i for i in range(5, 101, 5)]
 
     with open("../secret.yaml", 'r') as stream:
         secrets = yaml.safe_load(stream)
 
     storage = f'postgresql://{secrets["USER"]}:{secrets["PASSWORD"]}@{secrets["ENDPOINT"]}:{secrets["PORT"]}/{secrets["DBNAME"]}'
-    # for freq0, LF, LP, lobe_wide in learns:
     for freq0 in learns:
         _lf_lp_options = lf_lp_options(freq0, f_pulse)
         _lf_lp_options_indices = abs(_lf_lp_options[:, 2] - freq0) / freq0 < 0.1
         _lf_lp_options = _lf_lp_options[_lf_lp_options_indices]
 
-        study_name = f'Study-{freq0}'
+        study_name = f'Study{f_pulse}-{freq0}'
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
@@ -100,9 +84,9 @@ if __name__ == '__main__':
                                     direction='minimize',
                                     load_if_exists=True)
 
-        study.optimize(objective, n_trials=75)
+        study.optimize(objective, n_trials=30)
 
-        with open(f"../filters/parameters/f_{int(freq0)}.json", 'w') as best_params_f:
+        with open(f"../filters/clk_{f_pulse}/parameters/f_{int(freq0)}.json", 'w') as best_params_f:
             res = copy(study.best_params)
             LF, LP, f_resonator = _lf_lp_options[res['lf_lp_option']]
             res['LF'] = LF

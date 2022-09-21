@@ -118,7 +118,7 @@ def from_filter_json_plot(freq0):
 
 def plot_all_filters_json():
     filters_files = [int(100 * (1.18 ** i)) for i in range(20, 27)]
-    filters_files = [10 * (i + 1) for i in range(9)]
+    filters_files = range(5, 101, 5)
     for freq0 in filters_files:
         with open(f'filters/clk_{f_pulse}/parameters/f_{freq0}.json') as f:
             parameters = json.load(f)
@@ -129,9 +129,9 @@ def plot_all_filters_json():
 
 
 if __name__ == '__main__':
-    freq0 = 20
-    LF = 6
-    LP = 63
+    freq0 = 10
+    LF = 5
+    LP = 72
 
     start_freq = 0
     spectrum = 100
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     Path(f"filters/clk_{f_pulse}/parameters").mkdir(parents=True, exist_ok=True)
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
     # for f in range(10, stop=101, step=10):
-    suggest_lf_lp()
+    # suggest_lf_lp()
     manual_parameters_plot()
     # optuna_study_plot(f'Study-{100 * (1.18 ** 0)}', freq0)
     # from_filter_json_plot(freq0=2739)

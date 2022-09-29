@@ -1,29 +1,47 @@
+from collections import OrderedDict
+
 import numpy as np
+from numba import int32, float32
 
-from snn.learning_rules.learning_rule import LearningRule
-from snn.spiking_neuron import SCTNeuron
+from helpers import jitclass
 
 
-class STDP(LearningRule):
+spec = OrderedDict([
+    ('synapses_weights', float32[:]),
+    ('P', float32[:]),
+    ('pre_spikes_time', int32[:]),
+    ('post_spikes_time', int32),
+    ('A_LTP', float32),
+    ('A_LTD', float32),
+    ('A_tau', float32),
+    ('M', float32),
+    ('learning_window', int32),
+    ('time', int32),
+])
+
+
+@jitclass(spec)
+class STDP:
     """
     This code is basically implemented by this tutorial
     https://compneuro.neuromatch.io/tutorials/W2D3_BiologicalNeuronModels/student/W2D3_Tutorial4.html#section-2-implementation-of-stdp
     """
-    def __init__(self, neuron: SCTNeuron,
+    def __init__(self,
+                 synapses_weights: np.ndarray,
                  A_LTP: float,
                  A_LTD: float,
                  tau: float,
                  learning_window: int = 50):
-        super().__init__(neuron)
         self.A_LTP = A_LTP
         self.A_LTD = A_LTD
         self.tau = tau
         self.time = 0
 
+        self.synapses_weights = synapses_weights
         # P for every pre-synaptic
-        self.P = np.zeros(neuron.synapses_weights.shape)
-        self.M = 0
-        self.pre_spikes_time = np.zeros(neuron.synapses_weights.shape) * -learning_window
+        self.P = np.zeros(synapses_weights.shape)
+        self.M = 0.0
+        self.pre_spikes_time = np.zeros(synapses_weights.shape) * -learning_window
         self.post_synapse_time = -learning_window
         self.learning_window = learning_window // 2
 
@@ -38,16 +56,18 @@ class STDP(LearningRule):
             dt[self.post_synapse_time - self.pre_spikes_time > self.learning_window] = 1
 
             # Add LTP
-            self.neuron.synapses_weights += self.P * self.neuron.synapses_weights * dt
+            self.synapses_weights += self.P * self.synapses_weights * dt
 
-        if np.sum(pre_spikes) > 0:
+        # if there was a spike on pre synapse
+        if np.any(pre_spikes) > 0:
             self.pre_spikes_time[pre_spikes == 1] = self.time
             dt = np.zeros(self.P.shape)
             # only if pre spike comes after post spike in window of self.learning_window
             dt[self.pre_spikes_time - self.post_synapse_time > self.learning_window] = 1
 
             # M is always negative so actually its decreasing
-            self.neuron.synapses_weights += self.M * self.neuron.synapses_weights
+            self.synapses_weights += self.M * self.synapses_weights
+        return self.synapses_weights
 
 
 

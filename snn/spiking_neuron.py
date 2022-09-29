@@ -1,50 +1,37 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int32, float32, int8, float64, int64, int16, boolean
+from numba import int32, float32, int8, float64, int16, boolean
 from helpers import jitclass, njit
-
+from snn.learning_rules.stdp import STDP
 spec = OrderedDict([
     ('n_synapses', int32),
     ('membrane_potential', float32),
     ('_id', int32),
-    ('ca', float32),
     ('theta', float32),
-    ('ca_peak', float32),
-    ('delta_x', float32),
-    ('learning', boolean),
-    ('max_weight', float32),
-    ('min_weight', float32),
     ('pn_generator', int32),
     ('leakage_timer', int16),
     ('identity_const', int32),
     ('leakage_factor', int16),
     ('leakage_period', int16),
     ('rand_gauss_var', int32),
-    ('shifting_const', float32),
     ('threshold_pulse', float32),
-    ('threshold_weight', float32),
     ('activation_function', int8),
     ('gaussian_rand_order', int32),
-    ('threshold_potential', float32),
     ('synapses_weights', float64[:]),
     ('membrane_should_reset', boolean),
-    ('threshold_depression_low', float32),
-    ('threshold_depression_high', float32),
-    ('threshold_potentiation_low', float32),
-    ('threshold_potentiation_high', float32),
+    ('stdp', STDP.class_type.instance_type),
 
+    ('index', int32),
+    ('out_spikes', int8[:]),
+    ('log_out_spikes', boolean),
+    ('log_rand_gauss_var', boolean),
+    ('rand_gauss_var_graph', int32[:]),
     ('log_membrane_potential', boolean),
     ('_membrane_potential_graph', float32[:]),
     ('membrane_sample_max_window', float32[:]),
-    ('log_rand_gauss_var', boolean),
-    ('rand_gauss_var_graph', int32[:]),
-    ('log_ca', boolean),
-    ('ca_graph', float32[:]),
-    ('log_out_spikes', boolean),
-    ('out_spikes', int8[:]),
-    ('index', int32),
 ])
+
 
 IDENTITY = 0
 BINARY = 1
@@ -54,38 +41,25 @@ SIGMOID = 2
 @jitclass(spec)
 class SCTNeuron:
 
-    def __init__(self, synapses_weights, leakage_factor=0, leakage_period=1, leakage_timer=0, threshold_weight=0.5,
-                 activation_function=2, ca=0, ca_peak=1, threshold_potential=3, max_weight=1, min_weight=0,
-                 theta=0, shifting_const=8e-8, threshold_potentiation_high=100, threshold_potentiation_low=10,
-                 threshold_depression_high=100, threshold_depression_low=10, delta_x=5e-7, threshold_pulse=0,
-                 identity_const=32767, learning=False, log_membrane_potential=False, log_rand_gauss_var=False,
-                 log_ca=False,
+    def __init__(self, synapses_weights, leakage_factor=0, leakage_period=1, leakage_timer=0, theta=0,
+                 activation_function=0, threshold_pulse=0,
+                 identity_const=32767, log_membrane_potential=False, log_rand_gauss_var=False,
                  log_out_spikes=False, membrane_should_reset=True):
         synapses_weights = synapses_weights.astype(np.float64)
         self.n_synapses = len(synapses_weights)
         self.membrane_potential = 0.0
 
         self._id = -1
-        self.ca = ca
         self.theta = theta
-        self.ca_peak = ca_peak
-        self.delta_x = delta_x
-        self.max_weight = max_weight
-        self.min_weight = min_weight
         self.identity_const = identity_const
         self.leakage_timer = leakage_timer
-        self.shifting_const = shifting_const
         self.leakage_factor = leakage_factor
         self.leakage_period = leakage_period
         self.threshold_pulse = threshold_pulse
-        self.threshold_weight = threshold_weight
-        self.threshold_potential = threshold_potential
         self.synapses_weights = np.copy(synapses_weights)
-        self.threshold_depression_low = threshold_depression_low
-        self.threshold_depression_high = threshold_depression_high
-        self.threshold_potentiation_low = threshold_potentiation_low
-        self.threshold_potentiation_high = threshold_potentiation_high
-        self.learning = learning
+        self.stdp = stdp
+        if stdp is not None:
+            self.stdp.synapses_weights = self.synapses_weights
 
         self.rand_gauss_var = 0
         self.gaussian_rand_order = 8
@@ -94,21 +68,19 @@ class SCTNeuron:
         self.membrane_should_reset = membrane_should_reset
 
         self.log_membrane_potential = log_membrane_potential
-        self.log_ca = log_ca
         self.log_rand_gauss_var = log_rand_gauss_var
         self.log_out_spikes = log_out_spikes
         self._membrane_potential_graph = np.zeros(100).astype('float32')
         self.membrane_sample_max_window = np.zeros(10000).astype('float32')
-        self.ca_graph = np.zeros(100).astype('float32')
         self.out_spikes = np.zeros(100).astype('int8')
         self.rand_gauss_var_graph = np.zeros(100).astype('int32')
         self.index = 0
 
-    def ctn_cycle(self, f, enable):
-        emit_spike = self._kernel(f, enable)
+    def ctn_cycle(self, pre_spikes, enable):
+        emit_spike = self._kernel(pre_spikes, enable)
 
-        if self.learning:
-            self._learn(f, emit_spike)
+        if self.stdp is not None:
+            self.stdp.tick(pre_spikes, emit_spike)
 
         if self.log_membrane_potential:
             sample_window_size = len(self.membrane_sample_max_window)
@@ -125,11 +97,6 @@ class SCTNeuron:
                 self.rand_gauss_var_graph = np.concatenate((self.rand_gauss_var_graph,
                                                             np.zeros(self.index).astype('int32')))
             self.rand_gauss_var_graph[self.index] = self.rand_gauss_var
-        if self.log_ca:
-            if self.index == len(self.ca_graph):
-                self.ca_graph = np.concatenate((self.ca_graph,
-                                                np.zeros(self.index).astype('float32')))
-            self.ca_graph[self.index] = self.ca
         if self.log_out_spikes:
             if self.index == len(self.out_spikes):
                 self.out_spikes = np.concatenate((self.out_spikes,
@@ -177,20 +144,12 @@ class SCTNeuron:
                 self.leakage_timer += 1
         return emit_spike
 
-    def _learn(self, f, emit_spike):
-        if self.membrane_potential > self.threshold_potential and self.threshold_potentiation_high > self.ca > self.threshold_potentiation_low:
-            self.synapses_weights[f == 1] += self.delta_x
-        elif self.membrane_potential < self.threshold_potential and self.threshold_depression_high > self.ca > self.threshold_depression_low:
-            self.synapses_weights[f == 1] -= self.delta_x
-        self.synapses_weights += self.shifting_const
-        self.synapses_weights[
-            self.synapses_weights < self.threshold_weight + self.shifting_const] -= 2 * self.shifting_const
-        self.synapses_weights = np.clip(self.synapses_weights, self.min_weight, self.max_weight)
-
-        if emit_spike:
-            self.ca += self.ca_peak
-        else:
-            self.ca /= np.e
+    def set_stdp(self, A_LTP, A_LTD, tau, learning_window=50):
+        self.stdp = STDP(self.synapses_weights,
+                         A_LTP,
+                         A_LTD,
+                         tau,
+                         learning_window)
 
     def _activation_function_identity(self):
         const = self.identity_const
@@ -232,5 +191,5 @@ class SCTNeuron:
 
 @njit
 def createEmptySCTN():
-    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32767,
-                     False, False, False, False, False, True)
+    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0,
+                     32767, False, False, False, True)

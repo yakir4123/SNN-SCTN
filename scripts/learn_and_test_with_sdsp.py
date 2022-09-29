@@ -76,8 +76,6 @@ def make_neuron_learn(network, audio, samples):
 def learn_neurons(freqs):
     network = snn_based_resonator_for_learning(freqs)
     plot_network(network)
-    network.log_ca(66)
-    network.log_membrane_potential(66)
     [network.log_membrane_potential(i) for i in range(5, 66, 6)]
 
     neuron = network.neurons[66]
@@ -154,7 +152,7 @@ if __name__ == '__main__':
         (7500, 4, 1),
         (10000, 3, 2),
         ]
-    # learn_neurons(freqs)
+    learn_neurons(freqs)
     # test_neurons(freqs, 'bells5')
     # test_neurons(freqs, 'bottle1')
     # test_neurons(freqs, 'buzzer')

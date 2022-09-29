@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -6,15 +8,27 @@ from helpers.graphs import plot_network
 from snn.layers import SCTNLayer
 from snn.learning_rules.stdp import STDP
 from snn.resonator import Resonator, CustomResonator
+from snn.resonator import Resonator, CustomResonator, OptimizationResonator
 from snn.spiking_network import SpikingNetwork
 from snn.spiking_neuron import BINARY, createEmptySCTN, SIGMOID
 
 
 def snn_based_resonator(frequencies):
     network = SpikingNetwork()
-    clk_freq = 1.536 * 10**6
-    resonators = numbaList([CustomResonator(freq0, clk_freq, LF, LP) for (freq0, LF, LP) in frequencies])
-    for resonator in resonators:
+    clk_freq = int(1.536 * 10**6)
+
+    for freq0 in frequencies:
+        with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
+            parameters = json.load(f)
+        th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
+        weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
+        resonator = OptimizationResonator(freq0, clk_freq,
+                                          parameters['LF'], parameters['LP'],
+                                          th_gains, weighted_gains,
+                                          parameters['amplitude_gain'])
+        # resonators.append(resonator)
+# resonators = numbaList([CustomResonator(freq0, clk_freq, LF, LP) for (freq0, LF, LP) in frequencies])
+# for resonator in resonators:
         network.add_network(resonator.network)
 
     return network

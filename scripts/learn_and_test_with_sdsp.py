@@ -140,18 +140,7 @@ def test_neurons(freqs, audio):
 
 
 if __name__ == '__main__':
-    freqs = [
-        (100, 3, 299),
-        (250, 4, 60),
-        (500, 5, 14),
-        (1000, 6, 3),
-        (1750, 6, 1),
-        (2800, 3, 10),
-        (3500, 3, 8),
-        (5000, 3, 4),
-        (7500, 4, 1),
-        (10000, 3, 2),
-        ]
+    freqs = [int(100 * (1.18 ** i)) for i in range(0, 23)]
     learn_neurons(freqs)
     # test_neurons(freqs, 'bells5')
     # test_neurons(freqs, 'bottle1')

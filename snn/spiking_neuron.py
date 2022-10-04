@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int32, float32, int8, float64, int16, boolean
+from numba import int32, float32, int8, float64, int16, boolean, optional
 from helpers import jitclass, njit
 from snn.learning_rules.stdp import STDP
 spec = OrderedDict([
@@ -20,7 +20,7 @@ spec = OrderedDict([
     ('gaussian_rand_order', int32),
     ('synapses_weights', float64[:]),
     ('membrane_should_reset', boolean),
-    ('stdp', STDP.class_type.instance_type),
+    ('stdp', optional(STDP.class_type.instance_type)),
 
     ('index', int32),
     ('out_spikes', int8[:]),
@@ -57,9 +57,7 @@ class SCTNeuron:
         self.leakage_period = leakage_period
         self.threshold_pulse = threshold_pulse
         self.synapses_weights = np.copy(synapses_weights)
-        self.stdp = stdp
-        if stdp is not None:
-            self.stdp.synapses_weights = self.synapses_weights
+        self.stdp = None
 
         self.rand_gauss_var = 0
         self.gaussian_rand_order = 8
@@ -80,7 +78,7 @@ class SCTNeuron:
         emit_spike = self._kernel(pre_spikes, enable)
 
         if self.stdp is not None:
-            self.stdp.tick(pre_spikes, emit_spike)
+            self.synapses_weights = self.stdp.tick(pre_spikes, emit_spike)
 
         if self.log_membrane_potential:
             sample_window_size = len(self.membrane_sample_max_window)
@@ -103,7 +101,7 @@ class SCTNeuron:
                                                   np.zeros(self.index).astype('int8')))
             self.out_spikes[self.index] = emit_spike
 
-        if self.membrane_should_reset and emit_spike == 1:
+        if self.membrane_should_reset and emit_spike:
             self.membrane_potential = 0
 
         self.index += 1
@@ -144,12 +142,15 @@ class SCTNeuron:
                 self.leakage_timer += 1
         return emit_spike
 
-    def set_stdp(self, A_LTP, A_LTD, tau, learning_window=50):
+    def set_stdp(self, A_LTP, A_LTD, tau, clk_freq, wmax, wmin):
         self.stdp = STDP(self.synapses_weights,
                          A_LTP,
                          A_LTD,
                          tau,
-                         learning_window)
+                         clk_freq,
+                         wmax,
+                         wmin,
+                         )
 
     def _activation_function_identity(self):
         const = self.identity_const
@@ -172,7 +173,9 @@ class SCTNeuron:
         return emit_spike
 
     def _activation_function_binary(self):
-        return self.membrane_potential > self.threshold_pulse
+        if self.membrane_potential > self.threshold_pulse:
+            return 1
+        return 0
 
     def _activation_function_sigmoid(self):
         self.rand_gauss_var = 0
@@ -180,7 +183,9 @@ class SCTNeuron:
             self.rand_gauss_var += self.pn_generator & 0x1fff
             self.pn_generator = (self.pn_generator >> 1) | (
                     (self.pn_generator & 0x4000) ^ ((self.pn_generator & 0x0001) << 14))
-        return self.membrane_potential > self.rand_gauss_var
+        if self.membrane_potential > self.rand_gauss_var:
+            return 1
+        return 0
 
     def __hash__(self):
         return self._id
@@ -191,5 +196,5 @@ class SCTNeuron:
 
 @njit
 def createEmptySCTN():
-    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0, 0, 0,
+    return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0,
                      32767, False, False, False, True)

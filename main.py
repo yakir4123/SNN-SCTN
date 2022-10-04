@@ -133,10 +133,10 @@ if __name__ == '__main__':
     LF = 5
     LP = 72
 
-    start_freq = 0
-    spectrum = 100
+    start_freq = 1000
+    spectrum = 5000
     step = 1 / 40_000
-    f_pulse = 1.536 * (10 ** 6) // 10
+    f_pulse = int(1.536 * (10 ** 6))
     test_size = int(spectrum / step)
 
     Path(f"filters/clk_{f_pulse}/figures").mkdir(parents=True, exist_ok=True)
@@ -144,10 +144,10 @@ if __name__ == '__main__':
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
     # for f in range(10, stop=101, step=10):
     # suggest_lf_lp()
-    manual_parameters_plot()
+    # manual_parameters_plot()
     # optuna_study_plot(f'Study-{100 * (1.18 ** 0)}', freq0)
     # from_filter_json_plot(freq0=2739)
-    # from_filter_json_plot(freq0=3232)
+    from_filter_json_plot(freq0=3232)
     # plot_all_filters_json()
 
     print("Nice")

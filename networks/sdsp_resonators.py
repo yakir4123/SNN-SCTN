@@ -1,21 +1,15 @@
 import json
 
 import numpy as np
-from matplotlib import pyplot as plt
 
-from helpers import numbaList
-from helpers.graphs import plot_network
 from snn.layers import SCTNLayer
-from snn.learning_rules.stdp import STDP
-from snn.resonator import Resonator, CustomResonator
-from snn.resonator import Resonator, CustomResonator, OptimizationResonator
+from snn.resonator import OptimizationResonator
 from snn.spiking_network import SpikingNetwork
-from snn.spiking_neuron import BINARY, createEmptySCTN, SIGMOID
+from snn.spiking_neuron import BINARY, createEmptySCTN
 
 
-def snn_based_resonator(frequencies):
+def snn_based_resonator(frequencies, clk_freq):
     network = SpikingNetwork()
-    clk_freq = int(1.536 * 10 ** 6)
 
     for freq0 in frequencies:
         with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
@@ -26,16 +20,13 @@ def snn_based_resonator(frequencies):
                                           parameters['LF'], parameters['LP'],
                                           th_gains, weighted_gains,
                                           parameters['amplitude_gain'])
-        # resonators.append(resonator)
-        # resonators = numbaList([CustomResonator(freq0, clk_freq, LF, LP) for (freq0, LF, LP) in frequencies])
-        # for resonator in resonators:
         network.add_network(resonator.network)
 
     return network
 
 
 def snn_based_resonator_for_learning(frequencies, clk_freq):
-    network = snn_based_resonator(frequencies)
+    network = snn_based_resonator(frequencies, clk_freq)
     neuron = createEmptySCTN()
     neuron.synapses_weights = np.random.random(len(frequencies)) * 50 + 50
     neuron.leakage_factor = 1

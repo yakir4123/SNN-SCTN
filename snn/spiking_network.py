@@ -113,9 +113,6 @@ class SpikingNetwork:
     def log_rand_gauss_var(self, neurons_id):
         self.neurons[neurons_id].log_rand_gauss_var = True
 
-    def log_ca(self, neurons_id):
-        self.neurons[neurons_id].log_ca = True
-
     def log_out_spikes(self, neurons_id):
         self.neurons[neurons_id].log_out_spikes = True
 

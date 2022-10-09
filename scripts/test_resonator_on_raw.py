@@ -23,10 +23,9 @@ def input_to_resonators(resonators, data):
 if __name__ == '__main__':
     for audio_file in ['00']:
         audio_file = f'0{audio_file}'
-        clk_freq = int(1.536 * (10 ** 6))
-        # freqs = np.arange(20, 10_000, 10_000//15)
+        clk_freq = int(1.536 * (10 ** 6)) * 2
 
-        frequencies = [int(100 * (1.18 ** i)) for i in range(0, 23)]
+        frequencies = [int(200 * (1.18 ** i)) for i in range(0, 19)]
         resonators = []
         for freq0 in frequencies:
             with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
@@ -56,7 +55,7 @@ if __name__ == '__main__':
         data = librosa.resample(data, orig_sr=sr, target_sr=clk_freq, res_type='linear')
         data = data / np.max(data)
 
-        network = snn_based_resonator(frequencies)
+        network = snn_based_resonator(frequencies, clk_freq)
         plot_network(network)
 
         with open('sound_resampled.raw', 'wb') as f:

@@ -1,4 +1,5 @@
 import os
+import time
 import wave
 
 import librosa
@@ -59,17 +60,22 @@ def make_neuron_learn(network, audio, samples):
         for sample in range(samples):
             try:
                 audio_file = f'{(sample%1000)//100}{(sample%100)//10}{sample%10}'
-                audio_path = f"../sounds/RWCP_resampled/{audio}/{audio_file}.wav"
+                audio_path = f"../sounds/RWCP/{audio}/{audio_file}.raw"
+                with open(audio_path, "rb") as inp_f:
+                    data = inp_f.read()
+                    with wave.open("sound.wav", "wb") as out_f:
+                        out_f.setnchannels(1)
+                        out_f.setsampwidth(2)  # number of bytes
+                        out_f.setframerate(16000)
+                        out_f.writeframesraw(data)
+                audio_path = 'sound.wav'
 
                 data, sr = librosa.load(audio_path, sr=16000)
             except FileNotFoundError:
                 continue
 
-            clk_freq = 1.536 * (10 ** 6)
-            # resample to 1.53M
             data = librosa.resample(data, orig_sr=sr, target_sr=clk_freq, res_type='linear')
             data = data / np.max(data)
-            # data = data[:150000]
             input_to_network(network, data)
 
 
@@ -140,8 +146,8 @@ def test_neurons(freqs, audio, clk_freq):
 
 if __name__ == '__main__':
     # resample to 1.53M
-    clk_freq = 1.536 * (10 ** 6)
-    freqs = [int(100 * (1.18 ** i)) for i in range(0, 23)]
+    clk_freq = int(1.536 * (10 ** 6) * 2)
+    freqs = [int(200 * (1.18 ** i)) for i in range(0, 19)]
     learn_neurons(freqs, clk_freq)
     # test_neurons(freqs, 'bells5', clk_freq)
     # test_neurons(freqs, 'bottle1', clk_freq)

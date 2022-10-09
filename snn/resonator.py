@@ -121,100 +121,55 @@ class Resonator:
 
 @jitclass(OrderedDict([
     ('network', SpikingNetwork.class_type.instance_type),
-    ('gain_factor', float32),
-    ('theta_gain', float32),
-    ('weight_gain', float32),
-    ('amplitude_gain', float32),
     ('freq0', int32),
 ]))
 class CustomResonator:
 
     def __init__(self,
-                 freq0,
-                 f_pulse,
-                 LF,
-                 LP,
-                 theta_gain,
-                 weight_gain,
-                 amplitude_gain):
-        if LF == -1 or LP == -1:
-            LF, LP = suggest_lf_lp(freq0, f_pulse)
-        self.freq0 = freq0
-        self.gain_factor = np.double(9344 / ((2 ** (2 * LF - 3)) * (1 + LP)))
-        if theta_gain == -1:
-            self.theta_gain = self.gain_factor
-        else:
-            self.theta_gain = theta_gain
-        if weight_gain == -1:
-            self.weight_gain = self.gain_factor
-        else:
-            self.weight_gain = weight_gain
-        if amplitude_gain == -1:
-            self.amplitude_gain = self.gain_factor
-        else:
-            self.amplitude_gain = amplitude_gain
+                 resonator,
+                 threshold):
+        self.freq0 = resonator.freq0
+        self.network = resonator.network
 
-        self.network = SpikingNetwork()
-        self.network.add_amplitude(1000 * self.amplitude_gain)
         neuron = createEmptySCTN()
-        neuron.activation_function = IDENTITY
-        self.network.add_neuron(neuron)
+        neuron.synapses_weights = np.array([10.0])
+        neuron.leakage_factor = 1
+        neuron.leakage_period = np.inf
+        neuron.theta = 0
+        neuron.threshold_pulse = threshold
+        neuron.activation_function = BINARY
 
-        # SCTN 1
-        neuron = createEmptySCTN()
-        neuron.synapses_weights = np.array([11 * self.weight_gain, -9 * self.weight_gain], dtype=np.float64)
-        neuron.leakage_factor = LF
-        neuron.leakage_period = LP
-        neuron.theta = -1 * self.theta_gain
-        neuron.activation_function = IDENTITY
-        self.network.add_neuron(neuron)
+        self.network.add_layer(SCTNLayer([neuron]), True, True)
 
-        # SCTN 2 - 4
-        for i in range(3):
-            neuron = createEmptySCTN()
-            neuron.synapses_weights = np.array([10 * self.weight_gain], dtype=np.float64)
-            neuron.leakage_factor = LF
-            neuron.leakage_period = LP
-            neuron.theta = -5 * self.theta_gain
-            neuron.activation_function = IDENTITY
-            self.network.add_neuron(neuron)
 
-        for neuron in self.network.neurons:
-            neuron.membrane_should_reset = False
-
-        for i in range(0, 4):
-            self.network.connect_by_id(i, i + 1)
-
-        # feedback
-        self.network.connect(self.network.neurons[4],
-                             self.network.neurons[1])
-
-        layer0 = SCTNLayer([self.network.neurons[0]])
-        layer1 = SCTNLayer([self.network.neurons[i] for i in range(1, 4)])
-        layer2 = SCTNLayer([self.network.neurons[4]])
-        self.network.add_layer(layer0, False, False)
-        self.network.add_layer(layer1, False, False)
-        self.network.add_layer(layer2, False, False)
+def create_custom_resonator(freq0, clk_freq):
+    with open(f'filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
+        parameters = json.load(f)
+    th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
+    weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
+    resonator = OptimizationResonator(freq0, clk_freq,
+                                      parameters['LF'], parameters['LP'],
+                                      th_gains, weighted_gains,
+                                      parameters['amplitude_gain'])
+    return CustomResonator(resonator, parameters['th'])
 
 
 @jitclass(OrderedDict([
     ('network', SpikingNetwork.class_type.instance_type),
-    ('gain_factor', float32),
-    ('amplitude_gain', float32),
     ('freq0', int32),
 ]))
 class OptimizationResonator:
 
     def __init__(self,
                  freq0,
-                 f_pulse,
+                 clk_freq,
                  LF,
                  LP,
                  theta_gain,
                  weight_gain,
                  amplitude_gain):
         if LF == -1 or LP == -1:
-            LF, LP = suggest_lf_lp(freq0, f_pulse)
+            LF, LP = suggest_lf_lp(freq0, clk_freq)
         self.freq0 = freq0
 
         self.network = SpikingNetwork()

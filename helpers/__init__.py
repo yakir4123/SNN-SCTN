@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.ndimage import maximum_filter1d
 
-debug = False
+debug = True
 
 if not debug:
     from numba.experimental import jitclass

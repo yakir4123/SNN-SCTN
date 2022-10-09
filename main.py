@@ -1,5 +1,5 @@
+import os
 import json
-
 import yaml
 import optuna
 
@@ -7,9 +7,10 @@ from pathlib import Path
 from optuna.samplers import CmaEsSampler
 
 from helpers import *
+from helpers.graphs import plot_network
 from snn.spiking_neuron import IDENTITY, createEmptySCTN
 from snn.resonator import test_frequency, freq_of_resonator, \
-    OptimizationResonator, lf_lp_options
+    OptimizationResonator, lf_lp_options, CustomResonator, create_custom_resonator
 
 
 @njit
@@ -43,42 +44,67 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
     my_resonator = OptimizationResonator(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])
     # plot_network(my_resonator.network)
     my_resonator.network.log_membrane_potential(-1)
+    # my_resonator.network.log_out_spikes(-1)
     t = timing(test_frequency, return_res=False, return_time=True)(my_resonator, start_freq=start_freq, step=step,
                                                                    test_size=test_size, clk_freq=f_pulse)
     neuron = my_resonator.network.neurons[-1]
     LF = neuron.leakage_factor
     LP = neuron.leakage_period
 
+    # plot membrane potential
     y = neuron.membrane_potential_graph()
     x = np.linspace(start_freq, start_freq + spectrum, len(y))
-    y -= np.min(y)
-    max_y = np.max(y)
-    y /= max_y
+    # y -= np.min(y)
+    # max_y = np.max(y)
+    # y /= max_y
     plt.plot(x, y)
+
+    # f_filter = generate_filter(f_resonator,
+    #                            start_freq=start_freq,
+    #                            spectrum=spectrum,
+    #                            points=len(y),
+    #                            lobe_wide=0.125 * f_resonator)
+    # plt.plot(x, f_filter)
+    plt.axvline(x=freq0, c='red')
+    f = int(freq_of_resonator(f_pulse, LF, LP))
+    # mse = sum((f_filter - y) ** 2)
+    # plt.title(f'LF = {LF}, LP = {LP}, df = {freq0}, f = {f}, mse = {mse:.2f}, time={t:2.3f}s')
+    plt.title(f'df = {freq0}, f = {f}, time={t:2.3f}s')
+    if save_plt is not None:
+        plt.savefig(save_plt)
+    plt.show()
+    return
+    # plot emitted spikes
+    y = neuron.out_spikes[:neuron.index]
+    y = np.convolve(y, np.ones(5000, dtype=int), 'valid')
+    x = np.linspace(start_freq, start_freq + spectrum, len(y))
+    plt.plot(x, y)
+    max_y = np.max(y)
+
     f_filter = generate_filter(f_resonator,
                                start_freq=start_freq,
                                spectrum=spectrum,
                                points=len(y),
-                               lobe_wide=0.125 * f_resonator)
+                               lobe_wide=0.125 * f_resonator) * max_y
     plt.plot(x, f_filter)
     plt.axvline(x=freq0, c='red')
-    f = int(freq_of_resonator(f_pulse, LF, LP))
-    mse = sum((f_filter - y) ** 2)
-    plt.title(f'LF = {LF}, LP = {LP}, df = {freq0}, f = {f}, mse = {mse:.2f}, time={t:2.3f}s')
+    plt.title(f'Output spikes - df = {freq0}, f = {f}, time={t:2.3f}s')
     if save_plt is not None:
-        plt.savefig(save_plt)
+        output_file = Path(save_plt)
+        output_file = output_file.parent / f'spikes_{output_file.name}'
+        plt.savefig(output_file)
     plt.show()
 
 
 def manual_parameters_plot():
     if LF == -1 or LP == -1:
-        print(lf_lp_options(freq0=freq0, f_pulse=f_pulse))
+        print(lf_lp_options(freq0=freq0, f_pulse=clk_pulse))
     gain_factor = 9344 / ((2 ** (2 * LF - 3)) * (1 + LP))
     gains = {'th_gain0': gain_factor, 'th_gain1': gain_factor, 'th_gain2': gain_factor, 'th_gain3': gain_factor,
              'weight_gain0': gain_factor * 1.1, 'weight_gain1': gain_factor * 0.9,
              'weight_gain2': gain_factor, 'weight_gain3': gain_factor, 'weight_gain4': gain_factor,
              'amplitude_gain': gain_factor}
-    simulate_and_plot(freq0, LF, LP, gains, spectrum, start_freq, step=step, f_pulse=f_pulse)
+    simulate_and_plot(freq0, LF, LP, gains, spectrum, start_freq, step=step, f_pulse=clk_pulse)
 
 
 def optuna_study_plot(study_name, freq0, f_pulse=1_536_000):
@@ -102,30 +128,59 @@ def optuna_study_plot(study_name, freq0, f_pulse=1_536_000):
 
 
 def suggest_lf_lp():
-    _lf_lp_options = lf_lp_options(freq0, f_pulse)
+    _lf_lp_options = lf_lp_options(freq0, clk_pulse)
     _lf_lp_options_indices = np.argmin(abs(_lf_lp_options[:, 2] - freq0))
     LF, LP, f_resonator = _lf_lp_options[_lf_lp_options_indices]
     return LF, LP, f_resonator
 
 
 def from_filter_json_plot(freq0):
-    with open(f'filters/clk_{f_pulse}/parameters/f_{freq0}.json') as f:
+    with open(f'filters/clk_{clk_pulse}/parameters/f_{freq0}.json') as f:
         parameters = json.load(f)
     simulate_and_plot(freq0, parameters['LF'], parameters['LP'], parameters,
-                      2 * freq0, start_freq, f_pulse, step, parameters['f_resonator'],
-                      save_plt=f'filters/clk_{f_pulse}/figures/f_{freq0}.png')
+                      2 * freq0, start_freq, clk_pulse, step, parameters['f_resonator'],
+                      save_plt=f'filters/clk_{clk_pulse}/figures/f_{freq0}.png')
 
 
 def plot_all_filters_json():
-    filters_files = [int(100 * (1.18 ** i)) for i in range(20, 27)]
-    filters_files = range(5, 101, 5)
-    for freq0 in filters_files:
-        with open(f'filters/clk_{f_pulse}/parameters/f_{freq0}.json') as f:
+    filters_files = Path(f"filters/clk_{clk_pulse}/parameters").iterdir()
+    for filter_file in filters_files:
+        with open(filter_file) as f:
             parameters = json.load(f)
 
-        simulate_and_plot(freq0, parameters['LF'], parameters['LP'], parameters,
-                          2 * freq0, start_freq, f_pulse, step, parameters['f_resonator'],
-                          save_plt=f'filters/clk_{f_pulse}/figures/f_{freq0}.png')
+        simulate_and_plot(parameters['f0'], parameters['LF'], parameters['LP'], parameters,
+                          2 * parameters['f0'], start_freq, clk_pulse, step, parameters['f_resonator'],
+                          save_plt=f'filters/clk_{clk_pulse}/figures/f_{parameters["f0"]}.png')
+
+
+def custom_resonator_output_spikes(freq0):
+    my_resonator = create_custom_resonator(freq0=freq0, clk_freq=clk_pulse)
+    my_resonator.network.log_membrane_potential(-1)
+    my_resonator.network.log_out_spikes(-1)
+    plot_network(my_resonator.network)
+    start_freq = 0
+    spectrum = 2 * freq0
+    test_size = int(spectrum / step)
+    neuron = my_resonator.network.neurons[-1]
+
+    neuron.membrane_sample_max_window = np.zeros(100).astype('float32')
+    t = timing(test_frequency, return_res=False, return_time=True)(my_resonator,
+                                                                   start_freq=start_freq, step=step,
+                                                                   test_size=test_size, clk_freq=clk_pulse)
+
+
+    y = neuron.membrane_potential_graph()
+    x = np.linspace(start_freq, start_freq + spectrum, len(y))
+    plt.title('membrane potential')
+    plt.plot(x, y)
+    plt.show()
+
+    y = neuron.out_spikes[:neuron.index]
+    y = np.convolve(y, np.ones(100, dtype=int), 'valid')
+    x = np.linspace(start_freq, start_freq + spectrum, len(y))
+    plt.title('spikes in window of 100')
+    plt.plot(x, y)
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -133,21 +188,22 @@ if __name__ == '__main__':
     LF = 5
     LP = 72
 
-    start_freq = 1000
+    start_freq = 0
     spectrum = 5000
     step = 1 / 40_000
-    f_pulse = int(1.536 * (10 ** 6))
+    clk_pulse = int(1.536 * (10 ** 6)) * 2
     test_size = int(spectrum / step)
 
-    Path(f"filters/clk_{f_pulse}/figures").mkdir(parents=True, exist_ok=True)
-    Path(f"filters/clk_{f_pulse}/parameters").mkdir(parents=True, exist_ok=True)
+    Path(f"filters/clk_{clk_pulse}/figures").mkdir(parents=True, exist_ok=True)
+    Path(f"filters/clk_{clk_pulse}/parameters").mkdir(parents=True, exist_ok=True)
     print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
     # for f in range(10, stop=101, step=10):
     # suggest_lf_lp()
     # manual_parameters_plot()
     # optuna_study_plot(f'Study-{100 * (1.18 ** 0)}', freq0)
-    # from_filter_json_plot(freq0=2739)
-    from_filter_json_plot(freq0=3232)
+    # for f in [3934, 5478]:
+    #     from_filter_json_plot(freq0=f)
+    # from_filter_json_plot(freq0=3232)
     # plot_all_filters_json()
-
+    custom_resonator_output_spikes(freq0=200)
     print("Nice")

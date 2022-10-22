@@ -132,18 +132,20 @@ class CustomResonator:
         self.network = resonator.network
 
         neuron = createEmptySCTN()
-        neuron.synapses_weights = np.array([10.0])
+        neuron.synapses_weights = np.array([10.0, 30.0])
         neuron.leakage_factor = 1
         neuron.leakage_period = np.inf
-        neuron.theta = 0
-        neuron.threshold_pulse = threshold
+        neuron.theta = -4
+        # neuron.threshold_pulse = threshold
+        neuron.threshold_pulse = 50
         neuron.activation_function = BINARY
 
         self.network.add_layer(SCTNLayer([neuron]), True, True)
+        self.network.connect(neuron, neuron)
 
 
 def create_custom_resonator(freq0, clk_freq):
-    with open(f'filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
+    with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
         parameters = json.load(f)
     th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
     weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]

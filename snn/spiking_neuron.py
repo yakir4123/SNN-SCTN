@@ -13,7 +13,7 @@ spec = OrderedDict([
     ('leakage_timer', int16),
     ('identity_const', int32),
     ('leakage_factor', int16),
-    ('leakage_period', int16),
+    ('leakage_period', float32),
     ('rand_gauss_var', int32),
     ('threshold_pulse', float32),
     ('activation_function', int8),
@@ -119,7 +119,6 @@ class SCTNeuron:
                 self.membrane_potential += self.theta * (2 ** (self.leakage_factor - 3))
 
             self.membrane_potential = np.clip(np.array([self.membrane_potential]), -524287, 524287)[0]
-
         # can't use dictionary of function because of numba ...
         if self.activation_function == IDENTITY:
             emit_spike = self._activation_function_identity()

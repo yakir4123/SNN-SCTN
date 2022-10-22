@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 from snn.layers import SCTNLayer
-from snn.resonator import OptimizationResonator
+from snn.resonator import OptimizationResonator, create_custom_resonator
 from snn.spiking_network import SpikingNetwork
 from snn.spiking_neuron import BINARY, createEmptySCTN
 
@@ -14,12 +14,14 @@ def snn_based_resonator(frequencies, clk_freq):
     for freq0 in frequencies:
         with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
             parameters = json.load(f)
-        th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
-        weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
-        resonator = OptimizationResonator(freq0, clk_freq,
-                                          parameters['LF'], parameters['LP'],
-                                          th_gains, weighted_gains,
-                                          parameters['amplitude_gain'])
+        # th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
+        # weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
+        #
+        # resonator = OptimizationResonator(freq0, clk_freq,
+        #                                   parameters['LF'], parameters['LP'],
+        #                                   th_gains, weighted_gains,
+        #                                   parameters['amplitude_gain'])
+        resonator = create_custom_resonator(freq0=freq0, clk_freq=clk_freq)
         network.add_network(resonator.network)
 
     return network
@@ -28,14 +30,14 @@ def snn_based_resonator(frequencies, clk_freq):
 def snn_based_resonator_for_learning(frequencies, clk_freq):
     network = snn_based_resonator(frequencies, clk_freq)
     neuron = createEmptySCTN()
-    neuron.synapses_weights = np.random.random(len(frequencies)) * 50 + 50
+    neuron.synapses_weights = np.random.random(len(frequencies)) * 25 + 75
     neuron.leakage_factor = 1
-    neuron.leakage_period = 500
-    neuron.theta = 1
-    neuron.threshold_pulse = 25000
+    neuron.leakage_period = np.inf
+    neuron.theta = -.8
+    neuron.threshold_pulse = 1000
     neuron.activation_function = BINARY
-    tau = 0.02  # 20 ms
-    neuron.set_stdp(0.000001, 0.000001, tau, clk_freq, 150, 0)
+    tau = 1 #0.02  # 20 ms
+    neuron.set_stdp(0.001, 0.01, tau, clk_freq, 200, 0)
 
     network.add_layer(SCTNLayer([neuron]), True, True)
 

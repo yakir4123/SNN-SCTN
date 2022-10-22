@@ -53,8 +53,8 @@ def resample_all_raw_files():
 
 @timing
 def make_neuron_learn(network, audio, samples):
-    if audio is None:
-        input_to_network(network, np.zeros(76500))  # 50ms
+    # if audio is None:
+    #     input_to_network(network, np.zeros(76500))  # 50ms
 
     for i in range(1):
         for sample in range(samples):
@@ -75,6 +75,8 @@ def make_neuron_learn(network, audio, samples):
                 continue
 
             data = librosa.resample(data, orig_sr=sr, target_sr=clk_freq, res_type='linear')
+            # remove silence
+            data = data[np.abs(data) > 2e-3]
             data = data / np.max(data)
             input_to_network(network, data)
 
@@ -87,20 +89,15 @@ def learn_neurons(freqs, clk_freq):
 
     def clear_neuron(neuron_):
         # make_neuron_learn(network, None, 0)
-        neuron_.synapses_weights = np.random.random(len(neuron_.synapses_weights)) * 150 - 75
+        neuron_.synapses_weights = np.random.random(len(neuron_.synapses_weights)) * 50 + 50
         neuron_.membrane_potential = 0
 
-    network.log_membrane_potential(-1)
-    timing(make_neuron_learn(network, 'bells5', 1))
-    plt.plot(network.neurons[-1].membrane_potential_graph())
-    print(f'bells5 {neuron.synapses_weights}')
-    clear_neuron(neuron)
-    timing(make_neuron_learn(network, 'bottle1', 1))
-    print(f'bottle1 {neuron.synapses_weights}')
-    clear_neuron(neuron)
-    timing(make_neuron_learn(network, 'buzzer', 1))
-    print(f'buzzer {neuron.synapses_weights}')
-    clear_neuron(neuron)
+    # for label in ['bells5', 'bottle1', 'buzzer']:
+    for label in ['bottle1']:
+        print(f'pre - learning - {label}\r\n{neuron.synapses_weights}')
+        timing(make_neuron_learn(network, label, 1))
+        print(f'post - learning - {label}\r\n{dict(zip(freqs, neuron.synapses_weights))}')
+        clear_neuron(neuron)
 
 
 def test_neurons(freqs, audio, clk_freq):
@@ -147,7 +144,8 @@ def test_neurons(freqs, audio, clk_freq):
 if __name__ == '__main__':
     # resample to 1.53M
     clk_freq = int(1.536 * (10 ** 6) * 2)
-    freqs = [int(200 * (1.18 ** i)) for i in range(0, 19)]
+    freqs = [int(200 * (1.18 ** i)) for i in range(0, 20)]
+    freqs = [200, 236, 278, 328, 387, 457, 637, 751, 887, 1046, 1235, 1457, 1719, 2029, 2825, 3934, 5478]
     learn_neurons(freqs, clk_freq)
     # test_neurons(freqs, 'bells5', clk_freq)
     # test_neurons(freqs, 'bottle1', clk_freq)

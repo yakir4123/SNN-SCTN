@@ -33,8 +33,9 @@ def objective(trial):
     # weight_gain = 1.1, 0.9, 1., 1., 1.
     # theta_gain = 1., 1., 1., 1.
     # amplitude_gain = 1.
-    spectrum = 200
-    step = 1 / 50_000
+
+    spectrum = 2 * freq0
+    step = 1 / 1_000
     test_size = int(spectrum / step)
     my_resonator = OptimizationResonator(freq0,
                                          f_pulse,
@@ -51,21 +52,25 @@ def objective(trial):
     # membrane = denoise_small_values(np.abs(membrane), 10000)
     membrane -= np.min(membrane)
     max_membrane = np.max(membrane)
-    if max_membrane == 0:
+    main_freq_membrane = membrane[len(membrane)//2]
+    if max_membrane == 0 or main_freq_membrane == 0:
         return 99999
-    membrane /= max_membrane
+    # membrane /= max_membrane
+    membrane /= main_freq_membrane
 
     f_filter = generate_filter(f_resonator, start_freq=start_freq, spectrum=spectrum,
                                points=len(membrane), lobe_wide=0.125 * f_resonator)
+
     res = np.sum((f_filter - membrane) ** 2)
     return res
 
 
 if __name__ == '__main__':
     start_freq = 0
-    f_pulse = 1.536 * (10 ** 6) // 10
+    f_pulse = int(1.536 * (10 ** 6) * 2)
     # learns = [100 * (1.18 ** i) for i in range(25, 29)]
-    learns = [i for i in range(5, 101, 5)]
+    # learns = [i for i in range(5, 101, 5)]
+    learns = [3334]
 
     with open("../secret.yaml", 'r') as stream:
         secrets = yaml.safe_load(stream)
@@ -76,7 +81,7 @@ if __name__ == '__main__':
         _lf_lp_options_indices = abs(_lf_lp_options[:, 2] - freq0) / freq0 < 0.1
         _lf_lp_options = _lf_lp_options[_lf_lp_options_indices]
 
-        study_name = f'Study{f_pulse}-{freq0}'
+        study_name = f'Study{f_pulse}-{freq0}_5'
         # optuna.delete_study(study_name=study_name, storage=storage)
         study = optuna.create_study(study_name=study_name,
                                     storage=storage,
@@ -84,14 +89,18 @@ if __name__ == '__main__':
                                     direction='minimize',
                                     load_if_exists=True)
 
-        study.optimize(objective, n_trials=30)
+        study.optimize(objective, n_trials=50)
 
         with open(f"../filters/clk_{f_pulse}/parameters/f_{int(freq0)}.json", 'w') as best_params_f:
             res = copy(study.best_params)
             LF, LP, f_resonator = _lf_lp_options[res['lf_lp_option']]
+            res['f0'] = int(freq0)
             res['LF'] = LF
             res['LP'] = LP
             res['f_resonator'] = f_resonator
+            res['th'] = 50
 
             json.dump(res, best_params_f, indent=4)
     print('Done!')
+
+ # {'lf_lp_option': 2, 'th_gain0': 24.796592600235087, 'th_gain1': 8.500271828625097, 'th_gain2': 7.698360138202604, 'th_gain3': 7.739870518948241, 'weight_gain0': 10.91548614497665, 'weight_gain1': 16.71059902329521, 'weight_gain2': 14.271515089914804, 'weight_gain3': 10.573501804404541, 'weight_gain4': 18.999494073304135, 'amplitude_gain': 6.58589865793566}

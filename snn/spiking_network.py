@@ -103,6 +103,10 @@ class SpikingNetwork:
             self.layers_neurons[0].neurons[i].membrane_potential = p
         return self.input(np.zeros(len(potential)))
 
+    def reset_learning(self):
+        for neuron in self.neurons:
+            neuron.reset_learning()
+
     def is_enable(self, neuron):
         # if nothing connected to enable gate or a there was a spike from the neuron that connected to enable gate
         return self.enable_by[neuron._id] == -1 or self.spikes_graph.spikes[self.enable_by[neuron._id]] == 1

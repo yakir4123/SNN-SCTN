@@ -132,12 +132,13 @@ class CustomResonator:
         self.network = resonator.network
 
         neuron = createEmptySCTN()
+        # neuron.synapses_weights = np.array([2.5, 7.5])
         neuron.synapses_weights = np.array([10.0, 30.0])
+        # neuron.leakage_factor = 5 * (resonator.network.neurons[-1].leakage_factor + 1)
         neuron.leakage_factor = 1
         neuron.leakage_period = np.inf
-        neuron.theta = -4
-        # neuron.threshold_pulse = threshold
-        neuron.threshold_pulse = 50
+        neuron.theta = -1
+        neuron.threshold_pulse = threshold
         neuron.activation_function = BINARY
 
         self.network.add_layer(SCTNLayer([neuron]), True, True)

@@ -30,14 +30,15 @@ def snn_based_resonator(frequencies, clk_freq):
 def snn_based_resonator_for_learning(frequencies, clk_freq):
     network = snn_based_resonator(frequencies, clk_freq)
     neuron = createEmptySCTN()
-    neuron.synapses_weights = np.random.random(len(frequencies)) * 25 + 75
-    neuron.leakage_factor = 1
-    neuron.leakage_period = np.inf
+    neuron.synapses_weights = np.random.random(len(frequencies)) * 50 + 50
+    # neuron.synapses_weights = np.random.random(len(frequencies)) * 25 + 75
+    neuron.leakage_factor = 3
+    neuron.leakage_period = 10
     neuron.theta = -.8
-    neuron.threshold_pulse = 1000
+    neuron.threshold_pulse = 4000
     neuron.activation_function = BINARY
-    tau = 1 #0.02  # 20 ms
-    neuron.set_stdp(0.001, 0.01, tau, clk_freq, 200, 0)
+    tau = 20 / clk_freq  # 0.02  # 20 ms
+    neuron.set_stdp(0.00005, 0.00008, tau, clk_freq, 200, 0)
 
     network.add_layer(SCTNLayer([neuron]), True, True)
 
@@ -56,11 +57,11 @@ def labeled_sctn_neuron(synapses_weights):
 
 
 def bottle_sctn_neuron():
-    return labeled_sctn_neuron(np.array([53.89866944, 67.00697604, -73.62229865, -5.81576998, -53.15751697,
-                                         -9.60833318, -38.93982853, -44.8558205, -28.30142606, -20.12474913,
-                                         -21.33941269, 11.87871873, -66.62437808, -48.5158614, -12.55981448,
-                                         -17.61929173, -59.88717952, -22.05992219, 5.40754008, 72.55390892,
-                                         44.53077906, 73.34653236, -31.61805125]))
+    return labeled_sctn_neuron(np.array([16.99665138612786, 10.067802972199448, 10.930770186481432, 14.418219483909008,
+                                         14.600568854496965, 11.392388939586802, 8.430335845215323, 17.165601489139007,
+                                         15.553616827528327, 15.280227093705635, 17.202680880768003, 9.704397937041835,
+                                         14.336008919507218, 10.23243319292153, 17.064094482372525, 15.643889946098042,
+                                         14.743206685326824, 14.906974974673306]))
 
 
 def buzzer_sctn_neuron():

@@ -52,6 +52,10 @@ class STDP:
         self.P = np.zeros(synapses_weights.shape, dtype=np.float64)
         self.M = 0.0
 
+    def reset_learning(self):
+        self.P = np.zeros(self.P.shape, dtype=np.float64)
+        self.M = 0.0
+
     def tick(self, pre_spikes, post_spike):
         dp = -(self.dt / self.tau) * self.P
         dm = -(self.dt / self.tau) * self.M

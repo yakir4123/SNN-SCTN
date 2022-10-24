@@ -157,32 +157,33 @@ def plot_all_filters_json():
 
 def custom_resonator_output_spikes(freq0):
     my_resonator = create_custom_resonator(freq0=freq0, clk_freq=clk_pulse)
-    my_resonator.network.log_membrane_potential(-1)
+    my_resonator.network.log_membrane_potential(-2)
     my_resonator.network.log_out_spikes(-1)
     # plot_network(my_resonator.network)
     start_freq = 0
     spectrum = 2 * freq0
     test_size = int(spectrum / step)
-    neuron = my_resonator.network.neurons[-1]
+    # membrane_neuron = my_resonator.network.neurons[-2]
+    spikes_neuron = my_resonator.network.neurons[-1]
 
-    neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
+    spikes_neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
     t = timing(test_frequency, return_res=False, return_time=True)(my_resonator,
                                                                    start_freq=start_freq, step=step,
                                                                    test_size=test_size, clk_freq=clk_pulse)
 
-    y_membrane = neuron.membrane_potential_graph()
+    # y_membrane = membrane_neuron.membrane_potential_graph()
     # x = np.linspace(start_freq, start_freq + spectrum, len(y_membrane))
-    # plt.title(f'membrane potential th: {neuron.threshold_pulse}, theta: {neuron.theta}')
+    # plt.title(f'membrane potential f={freq0}')
     # plt.plot(x, y_membrane)
     # plt.show()
 
-    y_spikes = neuron.out_spikes[:neuron.index]
+    y_spikes = spikes_neuron.out_spikes[:spikes_neuron.index]
 
-    np.savez_compressed(f'output_{freq0}.npz',
-                        membrane=y_membrane,
-                        spikes=y_spikes)
+    # np.savez_compressed(f'output_{freq0}.npz',
+    #                     membrane=y_membrane,
+    #                     spikes=y_spikes)
 
-    spikes_window_size = 10000
+    spikes_window_size = 1000
     y_spikes = np.convolve(y_spikes, np.ones(spikes_window_size, dtype=int), 'valid')
     x = np.linspace(start_freq, start_freq + spectrum, len(y_spikes))
     plt.title(f'spikes in window of {spikes_window_size} freq: {freq0}')
@@ -191,14 +192,13 @@ def custom_resonator_output_spikes(freq0):
 
 
 if __name__ == '__main__':
-    freq0 = 10
-    LF = 5
-    LP = 72
+    freq0 = 3334
+    LF = 2
+    LP = 34
 
     start_freq = 0
-    spectrum = 5000
-    step = 1 / 20_000
-    # step = 1 / 1_000
+    spectrum = 7000
+    step = 1 / 5_000
     clk_pulse = int(1.536 * (10 ** 6)) * 2
     test_size = int(spectrum / step)
 
@@ -213,7 +213,8 @@ if __name__ == '__main__':
     #     from_filter_json_plot(freq0=f)
     # from_filter_json_plot(freq0=3232)
     # plot_all_filters_json()
-    for f in [3334, 5478]:
-        # f = int(200 * (1.18 ** i))
+    # custom_resonator_output_spikes(freq0=236)
+    for i in range(19):
+        f = int(200 * (1.18 ** i))
         custom_resonator_output_spikes(freq0=f)
     print("Nice")

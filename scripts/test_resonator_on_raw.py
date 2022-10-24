@@ -41,7 +41,7 @@ if __name__ == '__main__':
             resonator.network.log_out_spikes(-1)
             resonators.append(resonator)
 
-        label = 'phone4'
+        label = 'bottle1'
         audio_path = f"../sounds/RWCP/{label}/{audio_file}.raw"
         with open(audio_path, "rb") as inp_f:
             data = inp_f.read()
@@ -56,6 +56,7 @@ if __name__ == '__main__':
 
         # resample to clk_freq
         data = librosa.resample(data, orig_sr=sr, target_sr=clk_freq, res_type='linear')
+        data = data[np.abs(data) > 2e-3]
         data = data / np.max(data)
 
         network = snn_based_resonator(frequencies, clk_freq)
@@ -65,11 +66,18 @@ if __name__ == '__main__':
             f.write(data.tobytes())
         # data = np.concatenate([np.zeros(len(data)//2), data])
         input_to_resonators(resonators, data)
+        cols = int(np.floor(np.sqrt(len(resonators))))
+        rows = int(np.ceil(np.sqrt(len(resonators))))
 
-        for resonator in resonators[::-1]:
+        fig, axs = plt.subplots(cols, rows, sharex='all', sharey='all',)
+        fig.tight_layout(pad=.8)
+        for i, resonator in enumerate(resonators):
             neuron = resonator.network.neurons[-1]
             spikes_amount = np.convolve(neuron.out_spikes[:neuron.index], np.ones(1000, dtype=int), 'valid')
-            plt.plot(spikes_amount, label=resonator.freq0, alpha=0.65)
+            axs[i//rows, i % rows].plot(spikes_amount)
+            axs[i//rows, i % rows].set_title(f'{resonator.freq0}')
+            axs[i//rows, i % rows].set_yticks([0, 50, 100, 200])
+            # plt.plot(spikes_amount, label=resonator.freq0, alpha=0.65)
             # plt.title(f'audio file {audio_file} freq {resonator.freq0}')
             # membrane = neuron.membrane_potential_graph()
             # plt.text(x=len(membrane)//2,
@@ -78,8 +86,7 @@ if __name__ == '__main__':
             # plt.plot(membrane, label=resonator.freq0)
             # plt.show()
 
-        plt.title(f'spikes for {label} in window of 1000')
-        plt.legend(ncol=3)
-        plt.figure(figsize=(16, 12), dpi=80)
+        plt.suptitle(f'spikes for {label} in window of 1000')
+        plt.figure(figsize=(24, 18), dpi=80)
         # plt.savefig(f'../plots/{audio_file}.png')
         plt.show()

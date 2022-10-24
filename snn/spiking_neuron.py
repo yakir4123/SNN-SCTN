@@ -114,9 +114,8 @@ class SCTNeuron:
                 self.membrane_potential += self.theta
             else:
                 lf = (2 ** (self.leakage_factor - 3))
-                for i in range(len(self.synapses_weights)):
-                    self.membrane_potential += f[i] * self.synapses_weights[i] * lf
-                self.membrane_potential += self.theta * (2 ** (self.leakage_factor - 3))
+                self.membrane_potential += np.sum(np.multiply(f, self.synapses_weights)) * lf
+                self.membrane_potential += self.theta * lf
 
             self.membrane_potential = np.clip(np.array([self.membrane_potential]), -524287, 524287)[0]
         # can't use dictionary of function because of numba ...
@@ -150,6 +149,10 @@ class SCTNeuron:
                          wmax,
                          wmin,
                          )
+
+    def reset_learning(self):
+        if self.stdp is not None:
+            self.stdp.reset_learning()
 
     def _activation_function_identity(self):
         const = self.identity_const

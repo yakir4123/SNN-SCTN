@@ -11,7 +11,12 @@
 /matrices/*
 /sounds/*
 /plots/*
-*.pickle
 
-.git_backup
+*.pickle
+*.npz
+*.npy
+*.wav
+*.raw
+secret.yaml
+
 .membrane_potential

@@ -5,11 +5,11 @@ import librosa
 import numpy as np
 from matplotlib import pyplot as plt
 
-from helpers import timing, njit, numbaList
+from helpers import timing, njit
 from helpers.graphs import plot_network
-from networks.sdsp_resonators import snn_based_resonator
+from scripts.sdsp_resonators import snn_based_resonator
 from snn import resonator as sctn
-from snn.resonator import OptimizationResonator, create_custom_resonator
+from snn.resonator import create_custom_resonator
 
 
 @timing

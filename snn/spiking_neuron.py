@@ -1,14 +1,13 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int32, float32, int8, float64, int16, boolean, optional
+from numba import int32, float32, int8, float64, int16, boolean, optional, types
 from helpers import jitclass, njit
 from snn.learning_rules.stdp import STDP
 spec = OrderedDict([
-    ('n_synapses', int32),
-    ('membrane_potential', float32),
     ('_id', int32),
     ('theta', float32),
+    ('n_synapses', int32),
     ('pn_generator', int32),
     ('leakage_timer', int16),
     ('identity_const', int32),
@@ -18,6 +17,7 @@ spec = OrderedDict([
     ('threshold_pulse', float32),
     ('activation_function', int8),
     ('gaussian_rand_order', int32),
+    ('membrane_potential', float32),
     ('synapses_weights', float64[:]),
     ('membrane_should_reset', boolean),
     ('stdp', optional(STDP.class_type.instance_type)),
@@ -26,6 +26,7 @@ spec = OrderedDict([
     ('out_spikes', int8[:]),
     ('log_out_spikes', boolean),
     ('log_rand_gauss_var', boolean),
+    ('label', optional(types.string)),
     ('rand_gauss_var_graph', int32[:]),
     ('log_membrane_potential', boolean),
     ('_membrane_potential_graph', float32[:]),
@@ -58,6 +59,7 @@ class SCTNeuron:
         self.threshold_pulse = threshold_pulse
         self.synapses_weights = np.copy(synapses_weights)
         self.stdp = None
+        self.label = None
 
         self.rand_gauss_var = 0
         self.gaussian_rand_order = 8

@@ -77,15 +77,21 @@ def plot_network(network):
     for i, layer in enumerate(network.layers_neurons):
         for j, neuron in enumerate(layer.neurons):
             gap = column_length/len(layer.neurons)
-            pos[neuron._id] = [i, j * gap + gap/2]
+            label = neuron.label or neuron._id
+            pos[label] = [i, j * gap + gap/2]
 
     for out_edge, in_edges in enumerate(network.spikes_graph.out_edges):
         for in_edge in in_edges:
-            G.add_edge(out_edge, in_edge, color='black')
+            label_source = network.neurons[out_edge].label or out_edge
+            label_target = network.neurons[in_edge].label or in_edge
+
+            G.add_edge(label_source, label_target, color='black')
 
     for in_edge, out_edge in enumerate(network.enable_by):
         if out_edge != -1:
-            G.add_edge(out_edge, in_edge, color='red')
+            label_source = network.neurons[out_edge].label or out_edge
+            label_target = network.neurons[in_edge].label or in_edge
+            G.add_edge(label_source, label_target, color='red')
 
     colors = nx.get_edge_attributes(G, 'color').values()
 

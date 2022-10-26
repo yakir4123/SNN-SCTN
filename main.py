@@ -10,7 +10,7 @@ from optuna.samplers import CmaEsSampler
 
 from helpers import *
 from helpers.graphs import plot_network
-from snn.spiking_neuron import IDENTITY, createEmptySCTN
+from snn.spiking_neuron import IDENTITY, SCTNeuron, SCTNeuron
 from snn.resonator import test_frequency, freq_of_resonator, \
     OptimizationResonator, lf_lp_options, CustomResonator, create_custom_resonator
 
@@ -24,7 +24,7 @@ def identity_test():
     res_spikes = np.zeros(len(thetas))
     for theta in thetas:
         print(theta)
-        neuron = createEmptySCTN()
+        neuron = SCTNeuron()
         neuron.activation_function = IDENTITY
         neuron.theta = theta
         neuron.leakage_period = 1001

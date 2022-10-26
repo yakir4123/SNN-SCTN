@@ -5,7 +5,7 @@ import numpy as np
 from snn.layers import SCTNLayer
 from snn.resonator import OptimizationResonator, create_custom_resonator
 from snn.spiking_network import SpikingNetwork
-from snn.spiking_neuron import BINARY, createEmptySCTN
+from snn.spiking_neuron import BINARY, SCTNeuron
 
 
 def snn_based_resonator(frequencies, clk_freq):
@@ -20,7 +20,7 @@ def snn_based_resonator(frequencies, clk_freq):
 
 def snn_based_resonator_for_learning(frequencies, clk_freq):
     network = snn_based_resonator(frequencies, clk_freq)
-    neuron = createEmptySCTN()
+    neuron = SCTNeuron()
     neuron.synapses_weights = np.random.random(len(frequencies)) * 50 + 50
     # neuron.synapses_weights = np.random.random(len(frequencies)) * 25 + 75
     neuron.leakage_factor = 3
@@ -40,7 +40,7 @@ def labeled_sctn_neuron(label):
     synapses_generations = np.load(f'neurons_weights/{label}_synapses_weights_generations.npz')
     synapses_weights = synapses_generations['synapses_weights'][-1]
 
-    neuron = createEmptySCTN()
+    neuron = SCTNeuron()
     neuron.synapses_weights = synapses_weights
     # neuron.synapses_weights = np.zeros(len(synapses_weights) + 1)
     # neuron.synapses_weights[:-1] = synapses_weights
@@ -61,7 +61,7 @@ def silence_sctn_neuron():
          15.09037610800621, 14.270712683921625, 11.524699438111547, 16.33539582527102, 10.008313749018436,
          18.453458749397296, 13.936458335154036, 9.987915000046055]
     )
-    neuron = createEmptySCTN()
+    neuron = SCTNeuron()
     neuron.synapses_weights = synapses_weights
     neuron.synapses_weights[-1] = -2000
     neuron.leakage_factor = 3

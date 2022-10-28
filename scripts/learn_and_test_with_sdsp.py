@@ -87,7 +87,7 @@ def make_neuron_learn(network, audio_label, samples, repeats):
             audio_path = f"../sounds/RWCP/{audio_label}/{audio_file}.raw"
             data = load_data(audio_path)
             # remove silence
-            data = data[np.abs(data) > 2e-3]
+            # data = data[np.abs(data) > 2e-3]
         except FileNotFoundError:
             continue
 
@@ -99,7 +99,7 @@ def make_neuron_learn(network, audio_label, samples, repeats):
         np.savez_compressed(f'neurons_weights/{audio_label}_synapses_weights_generations.npz',
                             synapses_weights=weight_generations)
         mse = np.sum(weight_generations[i + 1, :] - weight_generations[i, :]) ** 2
-        if mse < 0.5:
+        if mse < 0.1:
             return weight_generations
     return weight_generations
 
@@ -112,15 +112,15 @@ def learn_neurons(freqs, clk_freq):
 
     def clear_neuron(neuron_):
         # make_neuron_learn(network, None, 0)
-        neuron_.synapses_weights = np.random.random(len(neuron_.synapses_weights)) * 50 + 50
+        neuron_.synapses_weights = np.random.random(len(neuron_.synapses_weights)) * 20 + 20
         neuron_.membrane_potential = 0
         neuron_.index = 0
 
     # for label in ['bells5', 'bottle1', 'buzzer', 'phone4']:
-    for label in ['phone4']:
+    for label in ['bottle1']:
         prev_weights = np.copy(neuron.synapses_weights)
         print(f'pre - learning - {label}\r\n{prev_weights}')
-        make_neuron_learn(network, label, samples=20, repeats=50)
+        make_neuron_learn(network, label, samples=20, repeats=10)
         print(f'post - learning - {label}\r\n{neuron.synapses_weights.tolist()}')
         print(
             f'diff - {label}\r\n{dict(zip(freqs, (neuron.synapses_weights - prev_weights).astype(np.int16)))}')
@@ -130,7 +130,7 @@ def learn_neurons(freqs, clk_freq):
 def test_neurons(freqs, audio, clk_freq):
     print(f'Classify test on {audio}')
     network = snn_based_resonator_for_test(freqs, clk_freq)
-    plot_network(network)
+    # plot_network(network)
     # network.log_membrane_potential(66)
     # network.log_membrane_potential(67)
     # network.log_membrane_potential(68)
@@ -155,8 +155,8 @@ if __name__ == '__main__':
     clk_freq = int(1.536 * (10 ** 6) * 2)
     # freqs = [int(200 * (1.18 ** i)) for i in range(0, 20)]
     freqs = [200, 236, 278, 328, 387, 457, 637, 751, 887, 1046, 1235, 1457, 1719, 2029, 2825, 3334, 3934, 5478]
-    # learn_neurons(freqs, clk_freq)
+    learn_neurons(freqs, clk_freq)
     # test_neurons(freqs, 'bottle1', clk_freq)
     # test_neurons(freqs, 'bells5', clk_freq)
     # test_neurons(freqs, 'buzzer', clk_freq)
-    test_neurons(freqs, 'phone4', clk_freq)
+    # test_neurons(freqs, 'phone4', clk_freq)

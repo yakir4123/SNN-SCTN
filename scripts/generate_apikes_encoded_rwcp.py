@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 (10000, 3, 2),
                 (15000, 3, 1),
             ]
-            resonators = numbaList([sctn.CustomResonator(freq0, clk_freq, LF, LP) for (freq0, LF, LP) in freqs])
+            resonators = numbaList([sctn.ExcitatoryResonator(freq0, clk_freq, LF, LP) for (freq0, LF, LP) in freqs])
 
             audio_path = f"../sounds/RWCP_resampled/{audio_type}/{audio_file}"
             data, sr = librosa.load(audio_path, sr=16000)

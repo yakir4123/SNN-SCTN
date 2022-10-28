@@ -7,9 +7,9 @@ from matplotlib import pyplot as plt
 
 from helpers import timing, njit
 from helpers.graphs import plot_network
-from scripts.sdsp_resonators import snn_based_resonator
+from scripts.rwcp_resonators import snn_based_resonator
 from snn import resonator as sctn
-from snn.resonator import create_custom_resonator
+from snn.resonator import create_excitatory_resonator, create_excitatory_inhibitory_resonator
 
 
 @timing
@@ -28,20 +28,11 @@ if __name__ == '__main__':
         frequencies = [int(200 * (1.18 ** i)) for i in range(0, 19)] + [5478]
         resonators = []
         for freq0 in frequencies:
-            with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
-                parameters = json.load(f)
-            th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
-            weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
-            resonator = create_custom_resonator(freq0=freq0, clk_freq=clk_freq)
-            # resonator = OptimizationResonator(freq0, clk_freq,
-            #                                   parameters['LF'], parameters['LP'],
-            #                                   th_gains, weighted_gains,
-            #                                   parameters['amplitude_gain'])
-            # resonator.network.log_membrane_potential(-1)
+            resonator = create_excitatory_inhibitory_resonator(freq0=freq0, clk_freq=clk_freq)
             resonator.network.log_out_spikes(-1)
             resonators.append(resonator)
 
-        label = 'bottle1'
+        label = 'bells5'
         audio_path = f"../sounds/RWCP/{label}/{audio_file}.raw"
         with open(audio_path, "rb") as inp_f:
             data = inp_f.read()
@@ -56,7 +47,7 @@ if __name__ == '__main__':
 
         # resample to clk_freq
         data = librosa.resample(data, orig_sr=sr, target_sr=clk_freq, res_type='linear')
-        data = data[np.abs(data) > 2e-3]
+        # data = data[np.abs(data) > 2e-3]
         data = data / np.max(data)
 
         network = snn_based_resonator(frequencies, clk_freq)
@@ -76,7 +67,7 @@ if __name__ == '__main__':
             spikes_amount = np.convolve(neuron.out_spikes[:neuron.index], np.ones(1000, dtype=int), 'valid')
             axs[i//rows, i % rows].plot(spikes_amount)
             axs[i//rows, i % rows].set_title(f'{resonator.freq0}')
-            axs[i//rows, i % rows].set_yticks([0, 50, 100, 200])
+            axs[i//rows, i % rows].set_yticks([0, 50, 100])
             # plt.plot(spikes_amount, label=resonator.freq0, alpha=0.65)
             # plt.title(f'audio file {audio_file} freq {resonator.freq0}')
             # membrane = neuron.membrane_potential_graph()

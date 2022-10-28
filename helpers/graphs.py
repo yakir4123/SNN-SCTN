@@ -84,14 +84,13 @@ def plot_network(network):
         for in_edge in in_edges:
             label_source = network.neurons[out_edge].label or out_edge
             label_target = network.neurons[in_edge].label or in_edge
-
             G.add_edge(label_source, label_target, color='black')
 
     for in_edge, out_edge in enumerate(network.enable_by):
         if out_edge != -1:
             label_source = network.neurons[out_edge].label or out_edge
             label_target = network.neurons[in_edge].label or in_edge
-            G.add_edge(label_source, label_target, color='red')
+            e = G.add_edge(label_source, label_target, color='red')
 
     colors = nx.get_edge_attributes(G, 'color').values()
 

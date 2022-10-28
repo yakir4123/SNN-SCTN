@@ -12,7 +12,8 @@ from helpers import *
 from helpers.graphs import plot_network
 from snn.spiking_neuron import IDENTITY, createEmptySCTN
 from snn.resonator import test_frequency, freq_of_resonator, \
-    OptimizationResonator, lf_lp_options, CustomResonator, create_custom_resonator
+    BaseResonator, lf_lp_options, ExcitatoryResonator, create_excitatory_resonator, create_full_resonator, \
+    create_excitatory_inhibitory_resonator
 
 
 @njit
@@ -43,7 +44,7 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
     test_size = int(spectrum / step)
     th_gains = [gains[f'th_gain{i}'] for i in range(4)]
     weighted_gains = [gains[f'weight_gain{i}'] for i in range(5)]
-    my_resonator = OptimizationResonator(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])
+    my_resonator = BaseResonator(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])
     # plot_network(my_resonator.network)
     my_resonator.network.log_membrane_potential(-1)
     # my_resonator.network.log_out_spikes(-1)
@@ -110,7 +111,7 @@ def manual_parameters_plot():
 
 
 def optuna_study_plot(study_name, freq0, f_pulse=1_536_000):
-    with open("secret.yaml", 'r') as stream:
+    with open("../secret.yaml", 'r') as stream:
         secrets = yaml.safe_load(stream)
     storage = f'postgresql://{secrets["USER"]}:{secrets["PASSWORD"]}@{secrets["ENDPOINT"]}:{secrets["PORT"]}/{secrets["DBNAME"]}'
 
@@ -156,14 +157,16 @@ def plot_all_filters_json():
 
 
 def custom_resonator_output_spikes(freq0):
-    my_resonator = create_custom_resonator(freq0=freq0, clk_freq=clk_pulse)
-    my_resonator.network.log_membrane_potential(-2)
+    # my_resonator = create_excitatory_resonator(freq0=freq0, clk_freq=clk_pulse)
+    my_resonator = create_excitatory_inhibitory_resonator(freq0=freq0, clk_freq=clk_pulse)
+    log_neuron_potentials = []
+    for i in log_neuron_potentials:
+        my_resonator.network.log_membrane_potential(i)
     my_resonator.network.log_out_spikes(-1)
     # plot_network(my_resonator.network)
     start_freq = 0
     spectrum = 2 * freq0
     test_size = int(spectrum / step)
-    # membrane_neuron = my_resonator.network.neurons[-2]
     spikes_neuron = my_resonator.network.neurons[-1]
 
     spikes_neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
@@ -171,17 +174,55 @@ def custom_resonator_output_spikes(freq0):
                                                                    start_freq=start_freq, step=step,
                                                                    test_size=test_size, clk_freq=clk_pulse)
 
-    # y_membrane = membrane_neuron.membrane_potential_graph()
-    # x = np.linspace(start_freq, start_freq + spectrum, len(y_membrane))
-    # plt.title(f'membrane potential f={freq0}')
-    # plt.plot(x, y_membrane)
-    # plt.show()
+    for i in log_neuron_potentials:
+        membrane_neuron = my_resonator.network.neurons[i]
+        y_membrane = membrane_neuron.membrane_potential_graph()
+        x = np.linspace(start_freq, start_freq + spectrum, len(y_membrane))
+        plt.title(f'membrane potential f={freq0}, neuron={i}')
+        plt.plot(x, y_membrane)
+        plt.show()
 
     y_spikes = spikes_neuron.out_spikes[:spikes_neuron.index]
 
     # np.savez_compressed(f'output_{freq0}.npz',
     #                     membrane=y_membrane,
     #                     spikes=y_spikes)
+
+    spikes_window_size = 5000
+    y_spikes = np.convolve(y_spikes, np.ones(spikes_window_size, dtype=int), 'valid')
+    x = np.linspace(start_freq, start_freq + spectrum, len(y_spikes))
+    plt.title(f'spikes in window of {spikes_window_size} freq: {freq0}')
+    plt.plot(x, y_spikes)
+    plt.show()
+
+
+def full_resonator_output_spikes(freq0):
+    my_resonator = create_full_resonator(freq0=freq0, clk_freq=clk_pulse)
+    my_resonator.network.log_membrane_potential(4)
+    my_resonator.network.log_out_spikes(4)
+    plot_network(my_resonator.network)
+    start_freq = 0
+    spectrum = 800#2 * freq0
+    test_size = int(spectrum / step)
+    membrane_neuron = my_resonator.network.neurons[4]
+    spikes_neuron = my_resonator.network.neurons[4]
+
+    spikes_neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
+    t = timing(test_frequency, return_res=False, return_time=True)(my_resonator,
+                                                                   start_freq=start_freq, step=step,
+                                                                   test_size=test_size, clk_freq=clk_pulse)
+
+    y_membrane = membrane_neuron.membrane_potential_graph()
+    x = np.linspace(start_freq, start_freq + spectrum, len(y_membrane))
+    plt.title(f'membrane potential f={freq0}')
+    plt.plot(x, y_membrane)
+    plt.show()
+
+    y_spikes = spikes_neuron.out_spikes[:spikes_neuron.index]
+
+    np.savez_compressed(f'output_{freq0}.npz',
+                        membrane=y_membrane,
+                        spikes=y_spikes)
 
     spikes_window_size = 1000
     y_spikes = np.convolve(y_spikes, np.ones(spikes_window_size, dtype=int), 'valid')
@@ -198,13 +239,12 @@ if __name__ == '__main__':
 
     start_freq = 0
     spectrum = 7000
-    step = 1 / 5_000
+    step = 1 / 12_000
     clk_pulse = int(1.536 * (10 ** 6)) * 2
     test_size = int(spectrum / step)
 
-    Path(f"filters/clk_{clk_pulse}/figures").mkdir(parents=True, exist_ok=True)
+    Path(f"filters/clהk_{clk_pulse}/figures").mkdir(parents=True, exist_ok=True)
     Path(f"filters/clk_{clk_pulse}/parameters").mkdir(parents=True, exist_ok=True)
-    print(f'f: {freq0}, spectrum: {spectrum}, test_size: {test_size}, step: 1/{test_size // spectrum}')
     # for f in range(10, stop=101, step=10):
     # suggest_lf_lp()
     # manual_parameters_plot()
@@ -214,7 +254,8 @@ if __name__ == '__main__':
     # from_filter_json_plot(freq0=3232)
     # plot_all_filters_json()
     # custom_resonator_output_spikes(freq0=236)
-    for i in range(19):
-        f = int(200 * (1.18 ** i))
-        custom_resonator_output_spikes(freq0=f)
+    # for i in range(19):
+    #     f = int(200 * (1.18 ** i))
+    #     custom_resonator_output_spikes(freq0=f)
+    custom_resonator_output_spikes(freq0=5478)
     print("Nice")

@@ -12,7 +12,6 @@ from snn.spiking_neuron import SCTNeuron, IDENTITY, createEmptySCTN, BINARY, SIG
 
 @jitclass(OrderedDict([
     ('network', SpikingNetwork.class_type.instance_type),
-    ('gain_factor', float32),
     ('freq0', int32),
 ]))
 class Resonator:
@@ -122,46 +121,169 @@ class Resonator:
 @jitclass(OrderedDict([
     ('network', SpikingNetwork.class_type.instance_type),
     ('freq0', int32),
+    ('gain_factor', int32),
 ]))
-class CustomResonator:
+class FullResonator:
 
-    def __init__(self,
-                 resonator,
-                 threshold):
-        self.freq0 = resonator.freq0
-        self.network = resonator.network
+    def __init__(self, base_resonator):
+        self.freq0 = base_resonator.freq0
+        self.network = base_resonator.network
+        gain_factor = 1
+        LF = self.network.neurons[0].leakage_factor
+        LP = self.network.neurons[0].leakage_period
 
+        # SCTN 5 - 8
+        for i in range(4):
+            neuron = createEmptySCTN()
+            neuron.synapses_weights = np.array([10 * gain_factor], dtype=np.float64)
+            neuron.leakage_factor = LF
+            neuron.leakage_period = LP
+            neuron.theta = -5 * gain_factor
+            neuron.activation_function = IDENTITY
+            self.network.add_neuron(neuron)
+
+        # SCTN 9 - 12
+        for i in range(4):
+            neuron = createEmptySCTN()
+            neuron.synapses_weights = np.array([10 * gain_factor], dtype=np.float64)
+            neuron.leakage_factor = LF
+            neuron.leakage_period = LP
+            neuron.theta = -5 * gain_factor
+            neuron.activation_function = BINARY
+            self.network.add_neuron(neuron)
+
+        # SCTN 13 - 16
+        for i in range(4):
+            neuron = createEmptySCTN()
+            neuron.synapses_weights = np.array([10 * gain_factor], dtype=np.float64)
+            neuron.leakage_factor = LF
+            neuron.leakage_period = LP
+            neuron.theta = -5 * gain_factor
+            neuron.activation_function = IDENTITY
+            self.network.add_neuron(neuron)
+
+        # SCTN 17
         neuron = createEmptySCTN()
-        # neuron.synapses_weights = np.array([2.5, 7.5])
-        neuron.synapses_weights = np.array([10.0, 30.0])
-        # neuron.leakage_factor = 5 * (resonator.network.neurons[-1].leakage_factor + 1)
-        neuron.leakage_factor = 1
-        neuron.leakage_period = np.inf
-        neuron.theta = -1
-        neuron.threshold_pulse = threshold
-        neuron.activation_function = BINARY
+        neuron.synapses_weights = np.array([6] * 4, dtype=np.float64)
+        neuron.leakage_factor = 5
+        neuron.leakage_period = 500
+        neuron.theta = -12
+        neuron.threshold_pulse = 150000
+        neuron.activation_function = IDENTITY
+        self.network.add_neuron(neuron)
 
-        self.network.add_layer(SCTNLayer([neuron]), True, True)
-        self.network.connect(neuron, neuron)
+        for neuron in self.network.neurons:
+            neuron.membrane_should_reset = False
+
+        for i in range(4, 8):
+            self.network.connect_by_id(i, i + 1)
+
+        # feedbacks
+        output_neurons = [8, 2, 4, 6]
+        for i, nid in enumerate(output_neurons):
+            self.network.connect_by_id(nid, 9 + i)
+            self.network.connect_by_id(nid, 13 + i)
+            self.network.connect_by_id(13 + i, 17)  # connect to the last neuron
+            self.network.connect_enable_by_id(9 + i, 13 + i)
+
+        layer0 = SCTNLayer([self.network.neurons[0]])
+        layer1 = SCTNLayer([self.network.neurons[i] for i in range(1, 5)])
+        layer2 = SCTNLayer([self.network.neurons[i] for i in range(5, 9)])
+        layer3 = SCTNLayer([self.network.neurons[i] for i in range(9, 13)])
+        layer4 = SCTNLayer([self.network.neurons[i] for i in range(13, 17)])
+        layer5 = SCTNLayer([self.network.neurons[17]])
+        self.network.add_layer(layer0, False, False)
+        self.network.add_layer(layer1, False, False)
+        self.network.add_layer(layer2, False, False)
+        self.network.add_layer(layer3, False, False)
+        self.network.add_layer(layer4, False, False)
+        self.network.add_layer(layer5, False, False)
 
 
-def create_custom_resonator(freq0, clk_freq):
+def create_full_resonator(freq0, clk_freq):
     with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
         parameters = json.load(f)
     th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
+    th_gains = [1 for i in range(4)]
     weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
-    resonator = OptimizationResonator(freq0, clk_freq,
-                                      parameters['LF'], parameters['LP'],
-                                      th_gains, weighted_gains,
-                                      parameters['amplitude_gain'])
-    return CustomResonator(resonator, parameters['th'])
+    weighted_gains = [1.1, 0.9] + [1.0 for i in range(3)]
+    parameters['amplitude_gain'] = 1
+    parameters['LF'] = 5
+    parameters['LP'] = 73
+    resonator = BaseResonator(freq0, clk_freq,
+                              parameters['LF'], parameters['LP'],
+                              th_gains, weighted_gains,
+                              parameters['amplitude_gain'])
+    return FullResonator(resonator)
 
 
 @jitclass(OrderedDict([
     ('network', SpikingNetwork.class_type.instance_type),
     ('freq0', int32),
 ]))
-class OptimizationResonator:
+class ExcitatoryResonator:
+
+    def __init__(
+            self,
+            base_resonator
+    ):
+        self.freq0 = base_resonator.freq0
+        self.network = base_resonator.network
+
+        neuron = createEmptySCTN()
+        neuron.synapses_weights = np.array([10.0])
+        neuron.leakage_period = np.inf
+        neuron.theta = -4
+        neuron.threshold_pulse = 50
+        neuron.reset_to = 30
+        neuron.activation_function = BINARY
+
+        self.network.add_layer(SCTNLayer([neuron]), True, True)
+
+
+def create_excitatory_resonator(freq0, clk_freq):
+    resonator = create_base_resonator(freq0, clk_freq)
+    return ExcitatoryResonator(resonator)
+
+
+@jitclass(OrderedDict([
+    ('network', SpikingNetwork.class_type.instance_type),
+    ('freq0', int32),
+]))
+class ExcitatoryInhibitoryResonator:
+
+    def __init__(self,
+                 exc_resonator1,
+                 exc_resonator2):
+        self.freq0 = exc_resonator1.freq0
+        self.network = exc_resonator1.network
+
+        exc_resonator2.network.neurons[0].use_clk_input = True
+        self.network.add_network(exc_resonator2.network)
+
+        neuron = createEmptySCTN()
+        neuron.synapses_weights = np.array([1., -1.])
+        neuron.leakage_period = np.inf
+        neuron.threshold_pulse = 10
+        neuron.activation_function = BINARY
+        neuron.reset_to = 9.5
+        neuron.theta = -0.007
+        neuron.min_clip = 0
+
+        self.network.add_layer(SCTNLayer([neuron]), True, True)
+
+
+def create_excitatory_inhibitory_resonator(freq0, clk_freq):
+    exc_resonator1 = create_excitatory_resonator(freq0, clk_freq)
+    exc_resonator2 = create_excitatory_resonator(freq0, clk_freq)
+    return ExcitatoryInhibitoryResonator(exc_resonator1, exc_resonator2)
+
+
+@jitclass(OrderedDict([
+    ('network', SpikingNetwork.class_type.instance_type),
+    ('freq0', int32),
+]))
+class BaseResonator:
 
     def __init__(self,
                  freq0,
@@ -175,7 +297,7 @@ class OptimizationResonator:
             LF, LP = suggest_lf_lp(freq0, clk_freq)
         self.freq0 = freq0
 
-        self.network = SpikingNetwork()
+        self.network = SpikingNetwork(clk_freq)
         self.network.add_amplitude(1000 * amplitude_gain)
         neuron = createEmptySCTN()
         neuron.activation_function = IDENTITY
@@ -218,6 +340,17 @@ class OptimizationResonator:
         self.network.add_layer(layer2, False, False)
 
 
+def create_base_resonator(freq0, clk_freq):
+    with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
+        parameters = json.load(f)
+    th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
+    weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
+    return BaseResonator(freq0, clk_freq,
+                         parameters['LF'], parameters['LP'],
+                         th_gains, weighted_gains,
+                         parameters['amplitude_gain'])
+
+
 @njit
 def input_by_spike(resonator, spike):
     resonator.network.input(np.array([spike]))
@@ -227,12 +360,11 @@ def input_by_spike(resonator, spike):
 def input_by_potential(resonator, potential):
     # resonator.network.layers_neurons[0].neurons[0].membrane_potential = np.int16(potential * resonator.amplitude)
     # resonator.network.input(np.array([0]))
-    resonator.network.input_potential(np.array([potential]))
+    resonator.network.input_potential(potential)
 
 
 @njit
 def test_frequency(resonator, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000):
-
     batch_size = 50_000
     shift = 0
     while test_size > 0:
@@ -254,7 +386,7 @@ def create_sine_wave(test_size, clk_freq, start_freq, step, shift):
 
 
 @njit
-def freq_of_resonator(f_pulse,  LF, LP):
+def freq_of_resonator(f_pulse, LF, LP):
     return f_pulse / ((2 ** LF) * 2 * np.pi * (1 + LP))
 
 
@@ -295,5 +427,3 @@ def suggest_lf_lp(freq0, f_pulse):
 
 def print_lf_lp_options(freq0, f_pulse):
     print(lf_lp_options(freq0, f_pulse))
-
-

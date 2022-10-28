@@ -11,6 +11,10 @@ from helpers import *
 
 
 @jitclass(OrderedDict([
+    ('clk_freq', int32),
+    ('clk_freq_sine', float32[:]),
+    ('clk_freq_i', int32),
+    ('clk_freq_qrt', int8),
     ('amplitude', float32[:]),
     ('enable_by', numbaListType(int32)),
     ('neurons', numbaListType(SCTNeuron.class_type.instance_type)),
@@ -19,7 +23,7 @@ from helpers import *
 ]))
 class SpikingNetwork:
 
-    def __init__(self):
+    def __init__(self, clk_freq):
         """
         @enable_by: list of all neurons that map if neuron is enabled by other neuron
             id is enabled by self.enable_by[id]
@@ -28,6 +32,12 @@ class SpikingNetwork:
         @neurons: list of all the neurons inside the network
         @layers_neurons: list of all the layers
         """
+        self.clk_freq = clk_freq
+        # clk_freq // 4 points in [0, pi/2]
+        range_space = np.arange(clk_freq // 4) / (clk_freq // 4) * (np.pi/2)
+        self.clk_freq_sine = np.sin(range_space).astype(np.float32)
+        self.clk_freq_i = 0
+        self.clk_freq_qrt = 0
         self.enable_by = numbaList([np.int32(0) for _ in range(0)])
         self.spikes_graph = DirectedEdgeListGraph()
         # numba needs to identify what the list type, so create empty list
@@ -90,7 +100,6 @@ class SpikingNetwork:
             for j, neuron in enumerate(layer.neurons):
                 if i == 0:
                     self.spikes_graph.update_spike(neuron, spike_train[j])
-                # else:
                 enable = self.is_enable(neuron)
                 emit_spike = neuron.ctn_cycle(self.spikes_graph.get_input_spikes_to(neuron), enable)
                 self.spikes_graph.update_spike(neuron, emit_spike)
@@ -99,9 +108,27 @@ class SpikingNetwork:
 
     def input_potential(self, potential):
         potential = (potential * self.amplitude).astype(np.int16)
+        self.clk_freq_i += 1
+        if self.clk_freq_i == len(self.clk_freq_sine):
+            self.clk_freq_i = 0
+            self.clk_freq_qrt = (self.clk_freq_qrt + 1) % 4
+
         for i, p in enumerate(potential):
-            self.layers_neurons[0].neurons[i].membrane_potential = p
+            neuron = self.layers_neurons[0].neurons[i]
+            if neuron.use_clk_input:
+                p = self._calculate_clk()
+            neuron.membrane_potential = p
+
         return self.input(np.zeros(len(potential)))
+
+    def _calculate_clk(self):
+        if self.clk_freq_qrt % 2 == 1:
+            p = self.clk_freq_sine[-self.clk_freq_i]
+        else:
+            p = self.clk_freq_sine[self.clk_freq_i]
+        if self.clk_freq_qrt >= 2:
+            p = -p
+        return p
 
     def reset_learning(self):
         for neuron in self.neurons:

@@ -10,7 +10,7 @@ from optuna.samplers import CmaEsSampler
 
 from helpers import *
 from helpers.graphs import plot_network
-from snn.spiking_neuron import IDENTITY, createEmptySCTN
+from snn.spiking_neuron import IDENTITY, create_SCTN
 from snn.resonator import test_frequency, freq_of_resonator, \
     BaseResonator, lf_lp_options, ExcitatoryResonator, create_excitatory_resonator, create_full_resonator, \
     create_excitatory_inhibitory_resonator
@@ -25,7 +25,7 @@ def identity_test():
     res_spikes = np.zeros(len(thetas))
     for theta in thetas:
         print(theta)
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.activation_function = IDENTITY
         neuron.theta = theta
         neuron.leakage_period = 1001
@@ -157,8 +157,8 @@ def plot_all_filters_json():
 
 
 def custom_resonator_output_spikes(freq0):
-    # my_resonator = create_excitatory_resonator(freq0=freq0, clk_freq=clk_pulse)
-    my_resonator = create_excitatory_inhibitory_resonator(freq0=freq0, clk_freq=clk_pulse)
+    my_resonator = create_excitatory_resonator(freq0=freq0, clk_freq=clk_pulse)
+    # my_resonator = create_excitatory_inhibitory_resonator(freq0=freq0, clk_freq=clk_pulse)
     log_neuron_potentials = []
     for i in log_neuron_potentials:
         my_resonator.network.log_membrane_potential(i)
@@ -243,7 +243,7 @@ if __name__ == '__main__':
     clk_pulse = int(1.536 * (10 ** 6)) * 2
     test_size = int(spectrum / step)
 
-    Path(f"filters/clהk_{clk_pulse}/figures").mkdir(parents=True, exist_ok=True)
+    Path(f"filters/clk_{clk_pulse}/figures").mkdir(parents=True, exist_ok=True)
     Path(f"filters/clk_{clk_pulse}/parameters").mkdir(parents=True, exist_ok=True)
     # for f in range(10, stop=101, step=10):
     # suggest_lf_lp()
@@ -257,5 +257,5 @@ if __name__ == '__main__':
     # for i in range(19):
     #     f = int(200 * (1.18 ** i))
     #     custom_resonator_output_spikes(freq0=f)
-    custom_resonator_output_spikes(freq0=5478)
+    custom_resonator_output_spikes(freq0=200)
     print("Nice")

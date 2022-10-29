@@ -209,6 +209,6 @@ class SCTNeuron:
 
 
 @njit
-def createEmptySCTN():
+def create_SCTN():
     return SCTNeuron(np.array([0]), 0, 0, 0, 0, 0, 0,
                      32767, False, False, False, True)

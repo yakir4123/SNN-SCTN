@@ -5,7 +5,7 @@ from numba import int8, int32, float32
 
 from helpers.graphs import DirectedEdgeListGraph
 from snn.layers import SCTNLayer
-from snn.spiking_neuron import SCTNeuron, createEmptySCTN
+from snn.spiking_neuron import SCTNeuron, create_SCTN
 
 from helpers import *
 
@@ -41,7 +41,7 @@ class SpikingNetwork:
         self.enable_by = numbaList([np.int32(0) for _ in range(0)])
         self.spikes_graph = DirectedEdgeListGraph()
         # numba needs to identify what the list type, so create empty list
-        self.neurons = numbaList([createEmptySCTN() for _ in range(0)])
+        self.neurons = numbaList([create_SCTN() for _ in range(0)])
         self.layers_neurons = numbaList([SCTNLayer(None) for _ in range(0)])
         self.amplitude = np.array([np.float32(0) for _ in range(0)])
 
@@ -105,6 +105,13 @@ class SpikingNetwork:
                 self.spikes_graph.update_spike(neuron, emit_spike)
         last_neurons = np.array([n._id for n in self.layers_neurons[-1].neurons])
         return self.spikes_graph.spikes[last_neurons]
+
+    def input_full_data(self, data):
+        classes = np.zeros(len(self.layers_neurons[-1].neurons))
+        for i, potential in enumerate(data):
+            res = self.input_potential(potential)
+            classes += res
+        return classes
 
     def input_potential(self, potential):
         potential = (potential * self.amplitude).astype(np.int16)

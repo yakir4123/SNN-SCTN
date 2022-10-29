@@ -7,7 +7,7 @@ from numba import float32, int32
 from helpers import jitclass, njit
 from snn.spiking_network import SpikingNetwork
 from snn.layers import SCTNLayer
-from snn.spiking_neuron import SCTNeuron, IDENTITY, createEmptySCTN, BINARY, SIGMOID
+from snn.spiking_neuron import SCTNeuron, IDENTITY, create_SCTN, BINARY, SIGMOID
 
 
 @jitclass(OrderedDict([
@@ -26,12 +26,12 @@ class Resonator:
         self.gain_factor = int(self.gain_factor * 100000000) / 100000000
         self.network = SpikingNetwork()
         self.network.add_amplitude(1000 * self.gain_factor)
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.activation_function = IDENTITY
         self.network.add_neuron(neuron)
 
         # SCTN 1
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.synapses_weights = np.array([11 * self.gain_factor, -9 * self.gain_factor], dtype=np.float64)
         neuron.leakage_factor = LF
         neuron.leakage_period = LP
@@ -41,7 +41,7 @@ class Resonator:
 
         # SCTN 2 - 4
         for i in range(3):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
@@ -51,7 +51,7 @@ class Resonator:
 
         # SCTN 5 - 8
         for i in range(4):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
@@ -61,7 +61,7 @@ class Resonator:
 
         # SCTN 9 - 12
         for i in range(4):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
@@ -71,7 +71,7 @@ class Resonator:
 
         # SCTN 13 - 16
         for i in range(4):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * self.gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
@@ -80,7 +80,7 @@ class Resonator:
             self.network.add_neuron(neuron)
 
         # SCTN 17
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.synapses_weights = np.array([6] * 4, dtype=np.float64)
         neuron.leakage_factor = 5
         neuron.leakage_period = 500
@@ -134,7 +134,7 @@ class FullResonator:
 
         # SCTN 5 - 8
         for i in range(4):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
@@ -144,7 +144,7 @@ class FullResonator:
 
         # SCTN 9 - 12
         for i in range(4):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
@@ -154,7 +154,7 @@ class FullResonator:
 
         # SCTN 13 - 16
         for i in range(4):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * gain_factor], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP
@@ -163,7 +163,7 @@ class FullResonator:
             self.network.add_neuron(neuron)
 
         # SCTN 17
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.synapses_weights = np.array([6] * 4, dtype=np.float64)
         neuron.leakage_factor = 5
         neuron.leakage_period = 500
@@ -230,7 +230,7 @@ class ExcitatoryResonator:
         self.freq0 = base_resonator.freq0
         self.network = base_resonator.network
 
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.synapses_weights = np.array([10.0])
         neuron.leakage_period = np.inf
         neuron.theta = -4
@@ -261,14 +261,17 @@ class ExcitatoryInhibitoryResonator:
         exc_resonator2.network.neurons[0].use_clk_input = True
         self.network.add_network(exc_resonator2.network)
 
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.synapses_weights = np.array([1., -1.])
         neuron.leakage_period = np.inf
         neuron.threshold_pulse = 10
+        neuron.threshold_pulse = 3
         neuron.activation_function = BINARY
         neuron.reset_to = 9.5
+        neuron.reset_to = 2
         neuron.theta = -0.007
         neuron.min_clip = 0
+        neuron.label = 'f' + str(self.freq0)
 
         self.network.add_layer(SCTNLayer([neuron]), True, True)
 
@@ -299,12 +302,12 @@ class BaseResonator:
 
         self.network = SpikingNetwork(clk_freq)
         self.network.add_amplitude(1000 * amplitude_gain)
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.activation_function = IDENTITY
         self.network.add_neuron(neuron)
 
         # SCTN 1
-        neuron = createEmptySCTN()
+        neuron = create_SCTN()
         neuron.synapses_weights = np.array([10 * weight_gain[0], -10 * weight_gain[1]], dtype=np.float64)
         neuron.leakage_factor = LF
         neuron.leakage_period = LP
@@ -314,7 +317,7 @@ class BaseResonator:
 
         # SCTN 2 - 4
         for i in range(3):
-            neuron = createEmptySCTN()
+            neuron = create_SCTN()
             neuron.synapses_weights = np.array([10 * weight_gain[2 + i]], dtype=np.float64)
             neuron.leakage_factor = LF
             neuron.leakage_period = LP

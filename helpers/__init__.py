@@ -88,7 +88,6 @@ def load_audio_data(audio_path, clk_freq, normalize=True):
 
 
 def generate_filter(*args, **kwargs):
-    # return oversample(np.load('../filters/filter_2777.npy'), points=kwargs['points'])
     return generate_sinc_filter(*args, **kwargs)
 
 

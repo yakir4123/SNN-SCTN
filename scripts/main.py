@@ -12,8 +12,7 @@ from helpers import *
 from helpers.graphs import plot_network
 from snn.spiking_neuron import IDENTITY, create_SCTN
 from snn.resonator import test_frequency, freq_of_resonator, \
-    BaseResonator, lf_lp_options, ExcitatoryResonator, create_excitatory_resonator, create_full_resonator, \
-    create_excitatory_inhibitory_resonator
+    lf_lp_options, create_excitatory_resonator, create_base_resonator_by_parameters
 
 
 @njit
@@ -44,7 +43,7 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
     test_size = int(spectrum / step)
     th_gains = [gains[f'th_gain{i}'] for i in range(4)]
     weighted_gains = [gains[f'weight_gain{i}'] for i in range(5)]
-    my_resonator = BaseResonator(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])
+    my_resonator = create_base_resonator_by_parameters(freq0, f_pulse, LF, LP, th_gains, weighted_gains, gains['amplitude_gain'])
     # plot_network(my_resonator.network)
     my_resonator.network.log_membrane_potential(-1)
     # my_resonator.network.log_out_spikes(-1)
@@ -161,13 +160,13 @@ def custom_resonator_output_spikes(freq0):
     # my_resonator = create_excitatory_inhibitory_resonator(freq0=freq0, clk_freq=clk_pulse)
     log_neuron_potentials = []
     for i in log_neuron_potentials:
-        my_resonator.network.log_membrane_potential(i)
-    my_resonator.network.log_out_spikes(-1)
+        my_resonator.log_membrane_potential(i)
+    my_resonator.log_out_spikes(-1)
     # plot_network(my_resonator.network)
     start_freq = 0
     spectrum = 2 * freq0
     test_size = int(spectrum / step)
-    spikes_neuron = my_resonator.network.neurons[-1]
+    spikes_neuron = my_resonator.neurons[-1]
 
     spikes_neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
     t = timing(test_frequency, return_res=False, return_time=True)(my_resonator,
@@ -175,7 +174,7 @@ def custom_resonator_output_spikes(freq0):
                                                                    test_size=test_size, clk_freq=clk_pulse)
 
     for i in log_neuron_potentials:
-        membrane_neuron = my_resonator.network.neurons[i]
+        membrane_neuron = my_resonator.neurons[i]
         y_membrane = membrane_neuron.membrane_potential_graph()
         x = np.linspace(start_freq, start_freq + spectrum, len(y_membrane))
         plt.title(f'membrane potential f={freq0}, neuron={i}')
@@ -189,42 +188,6 @@ def custom_resonator_output_spikes(freq0):
     #                     spikes=y_spikes)
 
     spikes_window_size = 5000
-    y_spikes = np.convolve(y_spikes, np.ones(spikes_window_size, dtype=int), 'valid')
-    x = np.linspace(start_freq, start_freq + spectrum, len(y_spikes))
-    plt.title(f'spikes in window of {spikes_window_size} freq: {freq0}')
-    plt.plot(x, y_spikes)
-    plt.show()
-
-
-def full_resonator_output_spikes(freq0):
-    my_resonator = create_full_resonator(freq0=freq0, clk_freq=clk_pulse)
-    my_resonator.network.log_membrane_potential(4)
-    my_resonator.network.log_out_spikes(4)
-    plot_network(my_resonator.network)
-    start_freq = 0
-    spectrum = 800#2 * freq0
-    test_size = int(spectrum / step)
-    membrane_neuron = my_resonator.network.neurons[4]
-    spikes_neuron = my_resonator.network.neurons[4]
-
-    spikes_neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
-    t = timing(test_frequency, return_res=False, return_time=True)(my_resonator,
-                                                                   start_freq=start_freq, step=step,
-                                                                   test_size=test_size, clk_freq=clk_pulse)
-
-    y_membrane = membrane_neuron.membrane_potential_graph()
-    x = np.linspace(start_freq, start_freq + spectrum, len(y_membrane))
-    plt.title(f'membrane potential f={freq0}')
-    plt.plot(x, y_membrane)
-    plt.show()
-
-    y_spikes = spikes_neuron.out_spikes[:spikes_neuron.index]
-
-    np.savez_compressed(f'output_{freq0}.npz',
-                        membrane=y_membrane,
-                        spikes=y_spikes)
-
-    spikes_window_size = 1000
     y_spikes = np.convolve(y_spikes, np.ones(spikes_window_size, dtype=int), 'valid')
     x = np.linspace(start_freq, start_freq + spectrum, len(y_spikes))
     plt.title(f'spikes in window of {spikes_window_size} freq: {freq0}')

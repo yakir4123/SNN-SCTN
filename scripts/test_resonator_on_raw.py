@@ -5,23 +5,13 @@ import librosa
 import numpy as np
 from matplotlib import pyplot as plt
 
-from helpers import timing, njit, load_audio_data
+from helpers import load_audio_data
 from helpers.graphs import plot_network
 from scripts.rwcp_resonators import snn_based_resonator
-from snn import resonator as sctn
-from snn.resonator import create_excitatory_resonator, create_excitatory_inhibitory_resonator
-
-
-@timing
-@njit
-def input_to_resonators(resonators, data):
-    for potential in data:
-        for resonator in resonators:
-            sctn.input_by_potential(resonator, potential)
 
 
 if __name__ == '__main__':
-    label = 'bottle1'
+    label = 'buzzer'
     for audio_file in ['00']:
         audio_file = f'0{audio_file}'
         clk_freq = int(1.536 * (10 ** 6)) * 2
@@ -30,7 +20,7 @@ if __name__ == '__main__':
 
         audio_path = f"../sounds/RWCP/{label}/{audio_file}.raw"
         data = load_audio_data(audio_path, clk_freq)
-        data = data[:len(data)//6]
+        data = data[:len(data)//2]
         network = snn_based_resonator(frequencies, clk_freq)
         last_layer_neurons = network.layers_neurons[-1].neurons
         plot_network(network)

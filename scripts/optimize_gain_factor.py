@@ -7,7 +7,7 @@ import numpy as np
 from optuna.samplers import CmaEsSampler, TPESampler
 
 from helpers import denoise_small_values, generate_sinc_filter, generate_filter, oversample
-from snn.resonator import test_frequency, OptimizationResonator, lf_lp_options
+from snn.resonator import test_frequency, BaseResonator, lf_lp_options
 
 
 def objective(trial):
@@ -37,13 +37,13 @@ def objective(trial):
     spectrum = 2 * freq0
     step = 1 / 1_000
     test_size = int(spectrum / step)
-    my_resonator = OptimizationResonator(freq0,
-                                         f_pulse,
-                                         LF,
-                                         LP,
-                                         theta_gain,
-                                         weight_gain,
-                                         amplitude_gain)
+    my_resonator = BaseResonator(freq0,
+                                 f_pulse,
+                                 LF,
+                                 LP,
+                                 theta_gain,
+                                 weight_gain,
+                                 amplitude_gain)
     my_resonator.network.log_membrane_potential(-1)
     test_frequency(my_resonator, start_freq=start_freq, step=step, test_size=test_size)
 

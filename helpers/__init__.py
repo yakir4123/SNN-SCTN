@@ -1,6 +1,9 @@
 import time
+import wave
 from functools import wraps
 from typing import List
+
+import librosa
 from scipy.interpolate import interp1d
 
 import networkx as nx
@@ -65,19 +68,26 @@ def denoise_small_values(arr, window):
     return maximum_filter1d(arr, size=window)[h_window::h_window]
 
 
-@njit
-def skew_score(arr):
-    pivot = np.argmax(arr)
-    score = 0
-    for i in range(0, pivot):
-        score += arr[i + 1] - arr[i]
-    for i in range(pivot, len(arr) - 1):
-        score += arr[i] - arr[i + 1]
-    return score / arr[pivot]
+def load_audio_data(audio_path, clk_freq, normalize=True):
+    with open(audio_path, "rb") as inp_f:
+        data = inp_f.read()
+        with wave.open("sound.wav", "wb") as out_f:
+            out_f.setnchannels(1)
+            out_f.setsampwidth(2)  # number of bytes
+            out_f.setframerate(16000)
+            out_f.writeframesraw(data)
+    audio_path = 'sound.wav'
+
+    data, sr = librosa.load(audio_path, sr=16000)
+
+    data = librosa.resample(data, orig_sr=sr, target_sr=clk_freq, res_type='linear')
+
+    if normalize:
+        data /= np.max(data)
+    return data
 
 
 def generate_filter(*args, **kwargs):
-    # return oversample(np.load('../filters/filter_2777.npy'), points=kwargs['points'])
     return generate_sinc_filter(*args, **kwargs)
 
 

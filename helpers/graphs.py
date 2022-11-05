@@ -70,10 +70,11 @@ def njit_empty_array():
 
 def plot_network(network):
     G = nx.DiGraph()
-    edges = []
     pos = {}
 
     column_length = max(len(layer.neurons) for layer in network.layers_neurons)
+    rows_length = len(network.layers_neurons)
+    plt.figure(figsize=(rows_length * 2, column_length // 4), dpi=160)
     for i, layer in enumerate(network.layers_neurons):
         for j, neuron in enumerate(layer.neurons):
             gap = column_length/len(layer.neurons)
@@ -84,7 +85,6 @@ def plot_network(network):
         for in_edge in in_edges:
             label_source = network.neurons[out_edge].label or out_edge
             label_target = network.neurons[in_edge].label or in_edge
-
             G.add_edge(label_source, label_target, color='black')
 
     for in_edge, out_edge in enumerate(network.enable_by):
@@ -96,6 +96,12 @@ def plot_network(network):
     colors = nx.get_edge_attributes(G, 'color').values()
 
     plt.subplot(111)
-    nx.draw(G, with_labels=True, font_weight='bold', pos=pos, edge_color=colors)
+    nx.draw(G, with_labels=False, font_weight='bold', pos=pos, edge_color=colors)
+
+    def nudge(pos, x_shift, y_shift):
+        return {n: (x + x_shift, y + y_shift) for n, (x, y) in pos.items()}
+    
+    pos_nodes = nudge(pos, 0, 1.25)
+    nx.draw_networkx_labels(G, pos=pos_nodes)  # nudged labels
 
     plt.show()

@@ -154,3 +154,6 @@ class SpikingNetwork:
     def log_out_spikes(self, neurons_id):
         self.neurons[neurons_id].log_out_spikes = True
 
+
+def get_labels(network: SpikingNetwork):
+    return np.array([n.label for n in network.layers_neurons[-1].neurons])

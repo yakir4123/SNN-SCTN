@@ -19,15 +19,22 @@ def snn_based_resonator(frequencies, clk_freq):
     return network
 
 
+def create_neuron_for_labeling(synapses_weights):
+    neuron = create_SCTN()
+    neuron.synapses_weights = synapses_weights
+    neuron.leakage_period = 3
+    neuron.leakage_period = 10
+    neuron.theta = 0
+    neuron.threshold_pulse = 50
+    neuron.activation_function = BINARY
+    return neuron
+
+
 def snn_based_resonator_for_learning(frequencies, clk_freq):
     network = snn_based_resonator(frequencies, clk_freq)
-    neuron = create_SCTN()
-    neuron.synapses_weights = np.random.random(len(frequencies)) * 20 + 20
-    neuron.leakage_factor = 3
-    neuron.leakage_period = np.inf
-    neuron.theta = 0
-    neuron.threshold_pulse = 20
-    neuron.activation_function = BINARY
+    synapses_weights = np.random.random(len(frequencies)) * 15 + 15
+    neuron = create_neuron_for_labeling(synapses_weights)
+
     tau = 12 / clk_freq
     neuron.set_stdp(0.00005, 0.00008, tau, clk_freq, 200, 0)
 
@@ -38,16 +45,11 @@ def snn_based_resonator_for_learning(frequencies, clk_freq):
 
 def labeled_sctn_neuron(label: str):
     synapses_generations = np.load(f'neurons_weights/{label}_synapses_weights_generations.npz')
-    synapses_weights = synapses_generations['synapses_weights'][-1]
+    synapses_weights = synapses_generations['synapses_weights']
+    synapses_weights = synapses_weights[-1]
 
-    neuron = create_SCTN()
-    neuron.synapses_weights = synapses_weights
+    neuron = create_neuron_for_labeling(synapses_weights)
     neuron.label = label
-    neuron.leakage_period = 3
-    neuron.leakage_period = np.inf
-    neuron.theta = 0
-    neuron.threshold_pulse = 20
-    neuron.activation_function = BINARY
     return neuron
 
 

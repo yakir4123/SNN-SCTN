@@ -8,7 +8,7 @@ from snn.spiking_neuron import BINARY, create_SCTN
 from snn.resonator import create_excitatory_inhibitory_resonator
 
 
-def snn_based_resonator(frequencies, clk_freq):
+def snn_based_resonators(frequencies, clk_freq):
     network = SpikingNetwork(clk_freq)
 
     for freq0 in frequencies:
@@ -31,7 +31,7 @@ def create_neuron_for_labeling(synapses_weights):
 
 
 def snn_based_resonator_for_learning(frequencies, clk_freq):
-    network = snn_based_resonator(frequencies, clk_freq)
+    network = snn_based_resonators(frequencies, clk_freq)
     synapses_weights = np.random.random(len(frequencies)) * 15 + 15
     neuron = create_neuron_for_labeling(synapses_weights)
 
@@ -54,7 +54,7 @@ def labeled_sctn_neuron(label: str):
 
 
 def snn_based_resonator_for_test(frequencies, clk_freq):
-    network = snn_based_resonator(frequencies, clk_freq)
+    network = snn_based_resonators(frequencies, clk_freq)
     coded_layer = SCTNLayer([
         labeled_sctn_neuron('bells5'),
         labeled_sctn_neuron('bottle1'),

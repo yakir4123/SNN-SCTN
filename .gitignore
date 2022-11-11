@@ -9,13 +9,13 @@
 /.idea
 /venv
 /matrices/*
-/sounds/*
 /plots/*
 
 *.pickle
 *.npz
 *.npy
 *.wav
+*.csv
 *.raw
 secret.yaml
 

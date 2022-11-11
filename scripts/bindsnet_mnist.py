@@ -7,7 +7,6 @@ import numpy as np
 import torch
 from torchvision import transforms
 from tqdm import tqdm
-
 from bindsnet.analysis.plotting import (
     plot_assignments,
     plot_input,
@@ -23,8 +22,6 @@ from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_assignments, get_square_weights
 
-from datasets import RWCPDataset
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
@@ -36,7 +33,7 @@ parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
 parser.add_argument("--theta_plus", type=float, default=0.05)
 parser.add_argument("--time", type=int, default=250)
-parser.add_argument("--dt", type=float, default=1)
+parser.add_argument("--dt", type=int, default=1.0)
 parser.add_argument("--intensity", type=float, default=128)
 parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
@@ -44,7 +41,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-# parser.set_defaults(plot=True, gpu=True)
+parser.set_defaults(plot=True, gpu=True)
 
 args = parser.parse_args()
 
@@ -91,47 +88,43 @@ start_intensity = intensity
 
 # Build network.
 network = DiehlAndCook2015(
-    n_inpt=11,
+    n_inpt=784,
     n_neurons=n_neurons,
     exc=exc,
     inh=inh,
     dt=dt,
+    norm=78.4,
     theta_plus=theta_plus,
-    inpt_shape=(1, 11),
+    inpt_shape=(1, 28, 28),
 )
 
 # Directs network to GPU
 if gpu:
     network.to("cuda")
 
-# # Load MNIST data.
-# train_dataset = MNIST(
-#     PoissonEncoder(time=time, dt=dt),
-#     None,
-#     root=os.path.join("..", "..", "data", "MNIST"),
-#     download=True,
-#     train=True,
-#     transform=transforms.Compose(
-#         [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
-#     ),
-# )
-
-train_dataset = RWCPDataset(
-    root=os.path.join("datasets", "RWCP_spikes"),
+# Load MNIST data.
+train_dataset = MNIST(
+    PoissonEncoder(time=time, dt=dt),
+    None,
+    root=os.path.join("..", "..", "data", "MNIST"),
+    download=True,
+    train=True,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+    ),
 )
 
 # Record spikes during the simulation.
 spike_record = torch.zeros((update_interval, int(time / dt), n_neurons), device=device)
 
 # Neuron assignments and spike proportions.
-n_classes = 9
+n_classes = 10
 assignments = -torch.ones(n_neurons, device=device)
 proportions = torch.zeros((n_neurons, n_classes), device=device)
 rates = torch.zeros((n_neurons, n_classes), device=device)
 
 # Sequence of accuracy estimates.
-accuracy = {"all": [],
-            "proportion": []}
+accuracy = {"all": [], "proportion": []}
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(
@@ -184,7 +177,7 @@ for epoch in range(n_epochs):
         if step > n_train:
             break
         # Get next input sample.
-        inputs = {"X": batch["encoded_audio"].view(int(batch["encoded_audio"].shape[1]), 1, 1, 11)}
+        inputs = {"X": batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28)}
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
 

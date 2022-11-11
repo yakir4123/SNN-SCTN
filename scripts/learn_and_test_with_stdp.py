@@ -114,7 +114,7 @@ if __name__ == '__main__':
         1719, 2029, 2825, 3334, 3934, 5478
     ]
 
-    # learn_neurons(freqs, 'bells5', clk_freq)
+    learn_neurons(freqs, 'bells5', clk_freq)
     # learn_neurons(freqs, 'bottle1', clk_freq)
     # learn_neurons(freqs, 'buzzer', clk_freq)
     # learn_neurons(freqs, 'phone4', clk_freq)

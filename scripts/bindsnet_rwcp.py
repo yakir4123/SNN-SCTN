@@ -5,7 +5,6 @@ from time import time as t
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from torchvision import transforms
 from tqdm import tqdm
 
 from bindsnet.analysis.plotting import (
@@ -16,8 +15,6 @@ from bindsnet.analysis.plotting import (
     plot_voltages,
     plot_weights,
 )
-from bindsnet.datasets import MNIST
-from bindsnet.encoding import PoissonEncoder
 from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
@@ -83,18 +80,19 @@ print("Running on Device = ", device)
 if n_workers == -1:
     n_workers = 0  # gpu * 4 * torch.cuda.device_count()
 
-if not train:
-    update_interval = n_test
+# if not train:
+#     update_interval = n_test
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 
 # Load MNIST data.
 clk_freq = int(1.536 * (10 ** 6) * 2)
+time = clk_freq * 50 // 1000
 dataset = RWCPSpikesDataset(
-    train_size=6 / 7,
-    slice_in_samples=clk_freq * 50 // 1000,
-    overlap=1 / 3,
+    train_size=3 / 7,
+    slice_in_samples=time,
+    overlap=0,
 )
 
 # Build network.
@@ -114,7 +112,7 @@ if gpu:
     network.to("cuda")
 
 # Record spikes during the simulation.
-spike_record = torch.zeros((update_interval, int(time / dt), n_neurons), device=device)
+spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
 
 # Neuron assignments and spike proportions.
 n_classes = len(dataset.classes)
@@ -139,7 +137,10 @@ network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 spikes = {}
 for layer in set(network.layers):
     spikes[layer] = Monitor(
-        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device
+        network.layers[layer],
+        state_vars=["s"],
+        # time=int(time / dt), # test will be in different lengths!
+        device=device
     )
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
@@ -245,7 +246,8 @@ for epoch in range(n_epochs):
         inh_voltages = inh_voltage_monitor.get("v")
 
         # Add to spikes recording.
-        spike_record[step % update_interval] = spikes["Ae"].get("s").squeeze()
+        # spike_record[step % update_interval] = spikes["Ae"].get("s").squeeze()
+        spike_record[0] += spikes["Ae"].get("s").squeeze()
 
         # Optionally plot various simulation information.
         if plot:
@@ -279,21 +281,24 @@ print("Training complete.\n")
 # Sequence of accuracy estimates.
 accuracy = {"all": 0, "proportion": 0}
 
-# Record spikes during the simulation.
-spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
-
 # Train the network.
 print("\nBegin testing\n")
 dataset.train_mode = False
 network.train(mode=False)
 start = t()
 
-pbar = tqdm(total=n_test)
-for step, batch in enumerate(dataset):
-    if step >= n_test:
-        break
+# Create a dataloader to iterate and batch data
+dataloader = torch.utils.data.DataLoader(
+    dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu
+)
+
+n_test = len(dataloader)
+for step, batch in enumerate(tqdm(dataloader)):
+    time = batch['encoded_spikes'].shape[-1]
+    # Record spikes during the test.
+    spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
     # Get next input sample.
-    inputs = {"X": batch["encoded_spikes"].view(batch['encoded_spikes'].shape[-1], 1, 1, 18)}
+    inputs = {"X": batch["encoded_spikes"].view(time, 1, 1, 18)}
     if gpu:
         inputs = {k: v.cuda() for k, v in inputs.items()}
 
@@ -324,8 +329,8 @@ for step, batch in enumerate(dataset):
     )
 
     network.reset_state_variables()  # Reset state variables.
-    pbar.set_description_str("Test progress: ")
-    pbar.update()
+    # pbar.set_description_str("Test progress: ")
+    # pbar.update()
 
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
 print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))

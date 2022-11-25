@@ -20,7 +20,7 @@ from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_assignments, get_square_weights
 
-from datasets.RWCP_spikes import RWCPSpikesDataset
+from datasets.RWCP_spikes_dataset import RWCPSpikesDataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
@@ -88,9 +88,10 @@ start_intensity = intensity
 
 # Load MNIST data.
 clk_freq = int(1.536 * (10 ** 6) * 2)
-time = clk_freq * 50 // 1000
+ms = 5 / 1000
+time = int(clk_freq * ms)
 dataset = RWCPSpikesDataset(
-    train_size=3 / 7,
+    train_size=6 / 7,
     slice_in_samples=time,
     overlap=0,
 )
@@ -112,7 +113,8 @@ if gpu:
     network.to("cuda")
 
 # Record spikes during the simulation.
-spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
+# spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
+spike_record = torch.zeros((update_interval, int(time / dt), n_neurons), device=device)
 
 # Neuron assignments and spike proportions.
 n_classes = len(dataset.classes)
@@ -173,7 +175,8 @@ for epoch in range(n_epochs):
         dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu
     )
 
-    for step, batch in enumerate(tqdm(dataloader)):
+    for step, batch in enumerate(tqdm(dataloader,
+                                      total=min(n_train, len(dataloader)))):
         if step > n_train:
             break
         # Get next input sample.
@@ -246,8 +249,8 @@ for epoch in range(n_epochs):
         inh_voltages = inh_voltage_monitor.get("v")
 
         # Add to spikes recording.
-        # spike_record[step % update_interval] = spikes["Ae"].get("s").squeeze()
-        spike_record[0] += spikes["Ae"].get("s").squeeze()
+        spike_record[step % update_interval] = spikes["Ae"].get("s").squeeze()
+        # spike_record[0] += spikes["Ae"].get("s").squeeze()
 
         # Optionally plot various simulation information.
         if plot:
@@ -292,8 +295,11 @@ dataloader = torch.utils.data.DataLoader(
     dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu
 )
 
-n_test = len(dataloader)
-for step, batch in enumerate(tqdm(dataloader)):
+n_test = min(n_test, len(dataloader))
+for step, batch in enumerate(tqdm(dataloader,
+                                  total=n_test)):
+    if step >= n_test:
+        break
     time = batch['encoded_spikes'].shape[-1]
     # Record spikes during the test.
     spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)

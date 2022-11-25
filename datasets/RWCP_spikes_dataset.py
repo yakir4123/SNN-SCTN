@@ -27,9 +27,13 @@ class RWCPSpikesDataset(Dataset):
         self.classes = metadata['label'].unique()
         self._shuffle_files(metadata, seed)
         self.train_meta_data, self.test_meta_data = train_test_split(metadata, train_size=train_size)
+
+        self.train_meta_data = self.prepare_data(self.train_meta_data, overlap)
+        self.test_meta_data = self.prepare_data(self.test_meta_data, overlap)
+
+        self.train_meta_data.reset_index(drop=True, inplace=True)
         self.test_meta_data.reset_index(drop=True, inplace=True)
-        self.prepare_train_data(overlap)
-        self.prepare_test_data()
+
         self._shuffle_files(self.train_meta_data, seed)
 
     def __len__(self):
@@ -55,10 +59,9 @@ class RWCPSpikesDataset(Dataset):
 
     @staticmethod
     def _shuffle_files(df, seed):
-        return df.sample(frac=1, random_state=seed).reset_index(drop=True)
+        return df.sample(frac=1, random_state=seed)
 
-    def prepare_train_data(self, overlap):
-        df = self.train_meta_data
+    def prepare_data(self, df, overlap):
         df['samples'] = df['size'] // (self.slice_in_samples * (1 - overlap))
         df = df.loc[
             df.index.repeat(df['samples'])
@@ -68,14 +71,7 @@ class RWCPSpikesDataset(Dataset):
                              .cumcount() * (self.slice_in_samples * (1 - overlap))).astype(np.int64)
         df['end_index'] = df['start_index'] + self.slice_in_samples
         df['original_size'] = df['size']
-        self.train_meta_data = df.drop(['size', 'samples'], axis=1)
-
-    def prepare_test_data(self):
-        df = self.test_meta_data
-        df['start_index'] = 0
-        df['end_index'] = df['size']
-        df['original_size'] = df['size']
-        self.test_meta_data = df.drop(['size'], axis=1)
+        return df.drop(['size', 'samples'], axis=1)
 
     def label_encode_to_str(self, code):
         return self.labels[code]

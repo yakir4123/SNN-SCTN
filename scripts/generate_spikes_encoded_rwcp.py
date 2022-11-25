@@ -3,10 +3,8 @@ import os
 from pathlib import Path
 
 import pandas as pd
-import tqdm
 import numpy as np
 
-from datasets.RWCP_spikes import RWCPSpikesDataset
 from helpers import load_audio_data
 from scripts.rwcp_resonators import snn_based_resonators
 
@@ -27,7 +25,7 @@ def generate_spikes(audio_label: str, audio_file: str):
     except FileNotFoundError:
         return
 
-    data = data[data > 1e-3]
+    # data = data[data > 1e-3]
     network = snn_based_resonators(freqs, clk_freq)
     output_neurons = network.layers_neurons[-1].neurons
     for n in output_neurons:
@@ -46,16 +44,17 @@ def generate_spikes(audio_label: str, audio_file: str):
 
 
 if __name__ == '__main__':
-    filter_labels = ['bells5', 'bottle1', 'buzzer', 'phone4']
+    filter_labels = ['bells5']#, 'bottle1', 'buzzer', 'phone4']
 
     args = [(audio_label, audio_file)
             for audio_label in os.listdir('../datasets/RWCP')
             for audio_file in os.listdir(f'../datasets/RWCP/{audio_label}')
-            if audio_label in filter_labels]
+            if (audio_label in filter_labels and '000' in audio_file)]
 
     with multiprocessing.Pool(processes=12) as pool:
         pool.starmap(generate_spikes, args)
 
+    exit(1)
     meta_data = [
         {
             'label': audio_label,

@@ -12,7 +12,6 @@ def snn_based_resonators(frequencies, clk_freq):
     network = SpikingNetwork(clk_freq)
 
     for freq0 in frequencies:
-        # resonator = create_excitatory_resonator(freq0=freq0, clk_freq=clk_freq)
         resonator = create_excitatory_inhibitory_resonator(freq0=freq0, clk_freq=clk_freq)
         network.add_network(resonator)
 
@@ -22,24 +21,31 @@ def snn_based_resonators(frequencies, clk_freq):
 def create_neuron_for_labeling(synapses_weights):
     neuron = create_SCTN()
     neuron.synapses_weights = synapses_weights
-    neuron.leakage_period = 3
-    neuron.leakage_period = 10
+    neuron.leakage_factor = 1
+    neuron.leakage_period = 250
     neuron.theta = 0
-    neuron.threshold_pulse = 50
+    neuron.threshold_pulse = 300
     neuron.activation_function = BINARY
+    return neuron
+
+
+def learning_neuron(frequencies, clk_freq):
+    synapses_weights = np.random.random(len(frequencies)) * 15 + 20
+    neuron = create_neuron_for_labeling(synapses_weights)
+
+    time_to_learn = 5e-3
+    tau = clk_freq * time_to_learn / 2
+
+    # neuron.set_stdp(0.00005, 0.00008, tau, clk_freq, 50, -50)
+    A = 0.0008
+    neuron.set_stdp(A, A, tau, clk_freq, 65, -65)
     return neuron
 
 
 def snn_based_resonator_for_learning(frequencies, clk_freq):
     network = snn_based_resonators(frequencies, clk_freq)
-    synapses_weights = np.random.random(len(frequencies)) * 15 + 15
-    neuron = create_neuron_for_labeling(synapses_weights)
-
-    tau = 12 / clk_freq
-    neuron.set_stdp(0.00005, 0.00008, tau, clk_freq, 200, 0)
-
+    neuron = learning_neuron(frequencies, clk_freq)
     network.add_layer(SCTNLayer([neuron]), True, True)
-
     return network
 
 
@@ -56,7 +62,7 @@ def labeled_sctn_neuron(label: str):
 def snn_based_resonator_for_test(frequencies, clk_freq):
     network = snn_based_resonators(frequencies, clk_freq)
     coded_layer = SCTNLayer([
-        labeled_sctn_neuron('bells5'),
+        # labeled_sctn_neuron('bells5'),
         labeled_sctn_neuron('bottle1'),
         labeled_sctn_neuron('buzzer'),
         labeled_sctn_neuron('phone4'),

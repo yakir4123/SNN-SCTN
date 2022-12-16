@@ -162,6 +162,14 @@ class SCTNeuron:
                          wmin,
                          )
 
+    def set_stdp_ltp(self, A_LTP):
+        if self.stdp is not None:
+            self.stdp.A_LTP = A_LTP
+
+    def set_stdp_ltd(self, A_LTD):
+        if self.stdp is not None:
+            self.stdp.A_LTD = A_LTD
+
     def reset_learning(self):
         if self.stdp is not None:
             self.stdp.reset_learning()

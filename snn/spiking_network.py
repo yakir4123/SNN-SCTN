@@ -113,6 +113,10 @@ class SpikingNetwork:
             classes += res
         return classes
 
+    def input_full_data_spikes(self, spike_train):
+        for i, spikes in enumerate(spike_train):
+            self.input(spikes)
+
     def input_potential(self, potential):
         potential = (potential * self.amplitude).astype(np.int16)
         self.clk_freq_i += 1

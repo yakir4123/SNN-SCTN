@@ -9,10 +9,10 @@ from snn.spiking_neuron import SCTNeuron
 ]))
 class SCTNLayer:
 
-    def __init__(self, neurons):
+    def __init__(self, neurons=None):
         if neurons is not None:
             self.neurons = numbaList(neurons)
 
     def merge(self, layer):
         for neuron in layer.neurons:
-            self.neurons.append(neuron)# = self.neurons + layer.neurons
+            self.neurons.append(neuron)

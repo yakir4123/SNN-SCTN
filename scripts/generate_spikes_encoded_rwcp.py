@@ -13,19 +13,18 @@ def generate_spikes(audio_label: str, audio_file: str):
     clk_freq = int(1.536 * (10 ** 6) * 2)
     freqs = [
         200, 236, 278, 328, 387, 457,
-        637, 751, 887, 1046, 1235, 1457,
-        1719, 2029, 2825, 3334, 3934, 5478
+        751, 887, 1046, 1235, 1457,
+        1719, 2029, 2825, 3934, 5478
     ]
 
     try:
         audio_path = f"../datasets/RWCP/" \
                      f"{audio_label}/" \
                      f"{audio_file}"
-        data = load_audio_data(audio_path, clk_freq)
+        data = load_audio_data(audio_path, clk_freq, remove_silence=True)
     except FileNotFoundError:
         return
 
-    # data = data[data > 1e-3]
     network = snn_based_resonators(freqs, clk_freq)
     output_neurons = network.layers_neurons[-1].neurons
     for n in output_neurons:
@@ -44,17 +43,21 @@ def generate_spikes(audio_label: str, audio_file: str):
 
 
 if __name__ == '__main__':
-    filter_labels = ['bells5']#, 'bottle1', 'buzzer', 'phone4']
+    filter_labels = ['bottle1', 'buzzer', 'phone4']
 
-    args = [(audio_label, audio_file)
-            for audio_label in os.listdir('../datasets/RWCP')
-            for audio_file in os.listdir(f'../datasets/RWCP/{audio_label}')
-            if (audio_label in filter_labels and '000' in audio_file)]
+    args = [
+        (audio_label, audio_file)
+        for audio_label in filter_labels
+        for audio_file in os.listdir(f'../datasets/RWCP/{audio_label}')
+        if audio_file != '000.raw'
+    ]
 
-    with multiprocessing.Pool(processes=12) as pool:
+    # for label in filter_labels:
+    #     print(f'Start {label}')
+    #     generate_spikes(label, '000.raw')
+    with multiprocessing.Pool(processes=6) as pool:
         pool.starmap(generate_spikes, args)
 
-    exit(1)
     meta_data = [
         {
             'label': audio_label,

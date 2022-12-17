@@ -3,8 +3,8 @@ from collections import OrderedDict
 import numpy as np
 from numba import int8, int32, float32
 
-from helpers.graphs import DirectedEdgeListGraph
 from snn.layers import SCTNLayer
+from helpers.graphs import DirectedEdgeListGraph
 from snn.spiking_neuron import SCTNeuron, create_SCTN
 
 from helpers import *
@@ -20,6 +20,7 @@ from helpers import *
     ('neurons', numbaListType(SCTNeuron.class_type.instance_type)),
     ('spikes_graph', DirectedEdgeListGraph.class_type.instance_type),
     ('layers_neurons', numbaListType(SCTNLayer.class_type.instance_type)),
+
 ]))
 class SpikingNetwork:
 
@@ -40,6 +41,7 @@ class SpikingNetwork:
         self.clk_freq_qrt = 0
         self.enable_by = numbaList([np.int32(0) for _ in range(0)])
         self.spikes_graph = DirectedEdgeListGraph()
+
         # numba needs to identify what the list type, so create empty list
         self.neurons = numbaList([create_SCTN() for _ in range(0)])
         self.layers_neurons = numbaList([SCTNLayer(None) for _ in range(0)])
@@ -48,11 +50,11 @@ class SpikingNetwork:
     def add_amplitude(self, amplitude):
         self.amplitude = np.append(self.amplitude, np.float32(amplitude))
 
-    def add_layer(self, layer, add_neurons, connect_neurons):
+    def add_layer(self, layer, add_neurons):
         for new_neuron in layer.neurons:
             if add_neurons:
                 self.add_neuron(new_neuron)
-            if connect_neurons and len(self.layers_neurons) > 0:
+            if add_neurons and len(self.layers_neurons) > 0:
                 [self.spikes_graph.connect(neuron, new_neuron) for neuron in self.layers_neurons[-1].neurons]
         self.layers_neurons.append(layer)
         return self
@@ -98,10 +100,11 @@ class SpikingNetwork:
         # first update that input neurons send spikes
         for i, layer in enumerate(self.layers_neurons):
             for j, neuron in enumerate(layer.neurons):
-                if i == 0:
-                    self.spikes_graph.update_spike(neuron, spike_train[j])
                 enable = self.is_enable(neuron)
-                emit_spike = neuron.ctn_cycle(self.spikes_graph.get_input_spikes_to(neuron), enable)
+                if i == 0:
+                    emit_spike = neuron.ctn_cycle(spike_train, enable)
+                else:
+                    emit_spike = neuron.ctn_cycle(self.spikes_graph.get_input_spikes_to(neuron), enable)
                 self.spikes_graph.update_spike(neuron, emit_spike)
         last_neurons = np.array([n._id for n in self.layers_neurons[-1].neurons])
         return self.spikes_graph.spikes[last_neurons]
@@ -114,8 +117,11 @@ class SpikingNetwork:
         return classes
 
     def input_full_data_spikes(self, spike_train):
+        classes = np.zeros(len(self.layers_neurons[-1].neurons))
         for i, spikes in enumerate(spike_train):
-            self.input(spikes)
+            res = self.input(spikes)
+            classes += res
+        return classes
 
     def input_potential(self, potential):
         potential = (potential * self.amplitude).astype(np.int16)

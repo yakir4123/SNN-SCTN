@@ -1,5 +1,8 @@
 from collections import OrderedDict
 
+import numpy as np
+from numba import float32
+
 from helpers import jitclass, numbaListType, numbaList
 from snn.spiking_neuron import SCTNeuron
 

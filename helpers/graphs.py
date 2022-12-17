@@ -74,7 +74,7 @@ def plot_network(network):
 
     column_length = max(len(layer.neurons) for layer in network.layers_neurons)
     rows_length = len(network.layers_neurons)
-    plt.figure(figsize=(rows_length * 2, column_length // 4), dpi=160)
+    plt.figure(figsize=(rows_length * 2, 4 * (1 + column_length // 4)), dpi=160)
     for i, layer in enumerate(network.layers_neurons):
         for j, neuron in enumerate(layer.neurons):
             gap = column_length/len(layer.neurons)
@@ -95,13 +95,12 @@ def plot_network(network):
 
     colors = nx.get_edge_attributes(G, 'color').values()
 
-    plt.subplot(111)
     nx.draw(G, with_labels=False, font_weight='bold', pos=pos, edge_color=colors)
 
     def nudge(pos, x_shift, y_shift):
         return {n: (x + x_shift, y + y_shift) for n, (x, y) in pos.items()}
-    
-    pos_nodes = nudge(pos, 0, 1.25)
-    nx.draw_networkx_labels(G, pos=pos_nodes)  # nudged labels
+
+    pos_nodes = nudge(pos, 0, 0)
+    nx.draw_networkx_labels(G, font_color="pink", pos=pos_nodes)  # nudged labels
 
     plt.show()

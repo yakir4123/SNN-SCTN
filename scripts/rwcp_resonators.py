@@ -22,9 +22,9 @@ def create_neuron_for_labeling(synapses_weights):
     neuron = create_SCTN()
     neuron.synapses_weights = synapses_weights
     neuron.leakage_factor = 1
-    neuron.leakage_period = 250
+    neuron.leakage_period = 10 * len(synapses_weights)
     neuron.theta = 0
-    neuron.threshold_pulse = 300
+    neuron.threshold_pulse = 50 * len(synapses_weights)
     neuron.activation_function = BINARY
     return neuron
 
@@ -33,12 +33,10 @@ def learning_neuron(frequencies, clk_freq):
     synapses_weights = np.random.random(len(frequencies)) * 15 + 20
     neuron = create_neuron_for_labeling(synapses_weights)
 
-    time_to_learn = 5e-3
+    time_to_learn = 2.5e-3
     tau = clk_freq * time_to_learn / 2
 
-    # neuron.set_stdp(0.00005, 0.00008, tau, clk_freq, 50, -50)
-    A = 0.0008
-    neuron.set_stdp(A, A, tau, clk_freq, 65, -65)
+    neuron.set_stdp(0.00008, 0.00008, tau, clk_freq, 50, -5)
     return neuron
 
 

@@ -12,7 +12,6 @@ from scripts.rwcp_resonators import snn_based_resonator_for_learning, snn_based_
     learning_neuron
 from snn.layers import SCTNLayer
 from snn.spiking_network import get_labels, SpikingNetwork
-from snn.spiking_neuron import create_SCTN
 
 
 def create_test_network(clk_freq):
@@ -47,17 +46,34 @@ def load_spikes_data(label, file_name, freqs):
 def test_input(network: SpikingNetwork, spikes):
     labels = get_labels(network)
     classes = network.input_full_data_spikes(spikes)
+
+    label_with_first_spike = ''
+    argmin_first_spikes = np.inf
+
+    for neuron in network.layers_neurons[-1].neurons:
+        neurons_spikes = neuron.out_spikes[neuron.index]
+        first_spike = np.argmax(neurons_spikes)
+        if first_spike < argmin_first_spikes:
+            argmin_first_spikes = first_spike
+            label_with_first_spike = neuron.label
+
     choose_labeled = np.argmax(classes)
-    print(f'Find class {labels[choose_labeled]}. out spikes {labels} = {classes}')
+    # print(f'Find class {labels[choose_labeled]}. out spikes {labels} = {classes}')
+    print(f'Most active {labels[choose_labeled]}, First spike {label_with_first_spike}. out spikes {dict(zip(labels, classes))}')
     return labels[choose_labeled]
 
 
 @timing
 def make_neuron_learn(network: SpikingNetwork, audio_label, signals, epochs):
     neuron = network.neurons[-1]
+    network.log_out_spikes(-1)
+    network.log_membrane_potential(-1)
+    neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
+
     weight_generations_buffer = np.zeros((epochs * len(signals) + 1, *neuron.synapses_weights.shape))
     weight_generations_buffer[0, :] = neuron.synapses_weights
 
+    compare_epochs_by = signals[0]
     with tqdm(total=epochs * len(signals)) as pbar:
         for epoch in range(epochs):
             audio_file_indices = np.random.permutation(len(signals))
@@ -68,7 +84,13 @@ def make_neuron_learn(network: SpikingNetwork, audio_label, signals, epochs):
                 spikes = load_spikes_data(audio_label, signal, freqs)
 
                 classes = network.input_full_data_spikes(spikes)
+                if signal == compare_epochs_by:
+                    np.savez_compressed(f'output_spikes/{signal}_{audio_label}_{epoch}.npz',
+                                        post_spikes=neuron.out_spikes[:neuron.index],
+                                        membrane_potential=neuron.membrane_potential_graph()
+                                        )
                 network.reset_learning()
+                network.reset_input()
                 weight_generations_buffer[i + 1, :] = neuron.synapses_weights
                 weight_generations = weight_generations_buffer[:i + 2, :]
 
@@ -92,7 +114,6 @@ def make_neuron_learn(network: SpikingNetwork, audio_label, signals, epochs):
 
 def learn_neurons(freqs, label, clk_freq):
     network = create_learning_network(clk_freq, freqs)
-
     neuron = network.neurons[-1]
 
     seed = sum(map(ord, label))
@@ -116,8 +137,12 @@ def test_neurons(freqs, label, clk_freq):
     print(f'Classify test on {label}')
     network = create_test_network(clk_freq)
     # plot_network(network)
+
+    network.log_out_spikes(-1)
+    network.log_out_spikes(-2)
+    network.log_out_spikes(-3)
+
     success = 0
-    count_test = 0
 
     seed = sum(map(ord, label))
     _, test_signals = train_test_files(label, train_test_split=.8, seed=seed)
@@ -127,9 +152,10 @@ def test_neurons(freqs, label, clk_freq):
 
         is_success = test_input(network, spikes) == label
         success += is_success
-        count_test += 1
 
-    print(f'success rate on {label} is {success / count_test * 100}')
+        network.reset_input()
+
+    print(f'success rate on {label} is {success / len(test_signals) * 100}%')
 
 
 def train_test_files(label, train_test_split=.5, seed=42):
@@ -152,7 +178,7 @@ if __name__ == '__main__':
     # ]
 
     freqs = [
-        751, 1046, 3934
+        751, 1046, 1235, 3934, 5478
     ]
 
     # learn_neurons(freqs, 'bottle1', clk_freq)

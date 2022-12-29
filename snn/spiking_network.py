@@ -1,13 +1,9 @@
-from collections import OrderedDict
-
-import numpy as np
-from numba import int8, int32, float32
-
+from helpers import *
 from snn.layers import SCTNLayer
+from collections import OrderedDict
+from numba import int8, int32, float32
 from helpers.graphs import DirectedEdgeListGraph
 from snn.spiking_neuron import SCTNeuron, create_SCTN
-
-from helpers import *
 
 
 @jitclass(OrderedDict([
@@ -150,6 +146,10 @@ class SpikingNetwork:
     def reset_learning(self):
         for neuron in self.neurons:
             neuron.reset_learning()
+
+    def reset_input(self):
+        for neuron in self.neurons:
+            neuron.index = 0
 
     def is_enable(self, neuron):
         # if nothing connected to enable gate or a there was a spike from the neuron that connected to enable gate

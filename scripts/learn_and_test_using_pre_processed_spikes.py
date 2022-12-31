@@ -9,7 +9,7 @@ from itertools import product
 from helpers.graphs import plot_network
 from helpers import timing, load_audio_data, printable_weights
 from scripts.rwcp_resonators import snn_based_resonator_for_learning, snn_based_resonator_for_test, labeled_sctn_neuron, \
-    learning_neuron
+    learning_neuron, create_neuron_for_labeling
 from snn.layers import SCTNLayer
 from snn.spiking_network import get_labels, SpikingNetwork
 
@@ -181,10 +181,11 @@ if __name__ == '__main__':
         751, 1046, 1235, 3934, 5478
     ]
 
+    semi_supervised_learning(freqs, clk_freq, freqs * 3)
     # learn_neurons(freqs, 'bottle1', clk_freq)
     # learn_neurons(freqs, 'buzzer', clk_freq)
     # learn_neurons(freqs, 'phone4', clk_freq)
 
     # test_neurons(freqs, 'bottle1', clk_freq)
     # test_neurons(freqs, 'buzzer', clk_freq)
-    test_neurons(freqs, 'phone4', clk_freq)
+    # test_neurons(freqs, 'phone4', clk_freq)

@@ -1,8 +1,9 @@
 import os
+import pickle
 import time
 import wave
 from functools import wraps
-from typing import List
+from typing import List, Dict
 
 import librosa
 import scipy as sp
@@ -74,7 +75,6 @@ def load_audio_data(audio_path, clk_freq,
                     normalize=True,
                     resample_time_ms=0,
                     remove_silence=False):
-
     gen_audio_path = f'sound{np.random.randint(10000)}.wav'
     with open(audio_path, "rb") as inp_f:
         data = inp_f.read()
@@ -98,7 +98,7 @@ def load_audio_data(audio_path, clk_freq,
         data = data[cumsum_data > th]
 
     if resample_time_ms > 0:
-        freq = int((resample_time_ms/1000) / (len(data)/16000) * clk_freq)
+        freq = int((resample_time_ms / 1000) / (len(data) / 16000) * clk_freq)
     else:
         freq = clk_freq
     data = librosa.resample(data, orig_sr=sr, target_sr=freq, res_type='linear')
@@ -113,8 +113,8 @@ def generate_filter(*args, **kwargs):
 def generate_sinc_filter(f0: float, start_freq: float, spectrum: float, points: int, lobe_wide: float):
     x = np.linspace(start_freq, start_freq + spectrum, points)
     x -= f0
-    x /= lobe_wide/np.pi
-    sinc = np.abs(np.sin(x)/x)
+    x /= lobe_wide / np.pi
+    sinc = np.abs(np.sin(x) / x)
     sinc[np.isnan(sinc)] = 1
     return sinc
 
@@ -147,3 +147,39 @@ def printable_weights(weights: np.ndarray):
     res = [f'{c}{blocks[w]}' for c, w in zip(colors, np.abs(weights))]
     res = ''.join(res) + '\033[91m'
     return res
+
+
+def neurons_labels(neurons, encoder: Dict, spikes=None):
+    if spikes is None:
+        return ''.join([
+            f'[{encoder[neuron.label]}]'
+            for neuron in neurons
+        ])
+
+    return '\n'.join([
+        f'[{encoder[neuron.label]}: {spikes[i]}]'
+        for i, neuron in enumerate(neurons)
+    ])
+
+
+
+def save_network_weights(network, path):
+    weights = {
+        neuron._id: neuron.synapses_weights
+        for neuron in network.neurons
+    }
+    labels = {
+        neuron._id: neuron.label
+        for neuron in network.neurons
+    }
+    with open(path, 'wb') as handle:
+        pickle.dump((weights, labels), handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def load_network_weights(network, path):
+    with open(path, 'rb') as handle:
+        (weights, labels) = pickle.load(handle)
+
+    for neuron in network.neurons:
+        neuron.label = labels[neuron._id]
+        neuron.synapses_weights = weights[neuron._id]

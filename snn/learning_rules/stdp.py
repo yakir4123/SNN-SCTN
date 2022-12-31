@@ -56,7 +56,6 @@ class STDP:
 
         # P for every pre-synaptic
         self.P = np.zeros(synapses_weights.shape, dtype=np.float64)
-        # self.M = np.zeros(synapses_weights.shape, dtype=np.float64)
         self.M = 0.0
 
         # start with a very large counter (compare to dt -> dW -> 0)
@@ -65,54 +64,19 @@ class STDP:
 
     def reset_learning(self):
         self.P = np.zeros(self.P.shape, dtype=np.float64)
-        # self.M = np.zeros(self.M.shape, dtype=np.float64)
         self.M = 0.0
         self.t_pre = (np.ones(self.t_pre.shape) * self.tau * 10).astype(np.int32)
         self.t_post = int(self.tau * 10)
-
-    def _tick(self, pre_spikes, post_spike):
-        self.t_pre += 1
-        self.t_post += 1
-        # reset counters if new spike arrive
-        self.t_pre = ((1 - pre_spikes) * self.t_pre).astype(np.int32)
-        self.t_post = int((1 - post_spike) * self.t_post)
-
-        dW_post = (post_spike *
-                   self.A_LTP *
-                   np.exp(-(self.t_pre - self.t_post) / self.tau))
-        # dW_post[pre_spikes == 1] = 0.
-
-        dW_pre = (pre_spikes *
-                  self.A_LTD *
-                  np.exp((self.t_pre - self.t_post) / self.tau))
-        if post_spike:
-            dW_pre[:] = 0.
-
-        self.synapses_weights += dW_post - dW_pre
-        self.synapses_weights = np.clip(self.synapses_weights, self.wmin, self.wmax)
-        return self.synapses_weights
 
     def tick(self, pre_spikes, post_spike):
         self.P = np.minimum(self.decay * self.P + self.A_LTP * pre_spikes, 1)
         dw_pre = self.P * post_spike
         dw_post = self.M * pre_spikes
-        # self.M[pre_spikes == 1] = 0
+
         self.M = np.minimum(self.decay * self.M + self.A_LTD * post_spike, 1)
-        self.synapses_weights += dw_pre - dw_post
+        self.synapses_weights += dw_pre + dw_post
         self.synapses_weights = np.clip(self.synapses_weights, self.wmin, self.wmax)
         return self.synapses_weights
-
-        #
-        # dp = -(self.dt / self.tau) * self.P
-        # dm = -(self.dt / self.tau) * self.M
-        # dW_post = np.minimum(pre_spikes * self.synapses_weights * self.M, 1)
-        # dW_pre = np.minimum(post_spike * self.synapses_weights * self.P, 1)
-        # self.P = np.maximum(np.minimum(dp + self.P + self.A_LTP * pre_spikes, 1.0), 0.0)
-        # self.M = max(min(dm + self.M + self.A_LTD * post_spike, 1.0), 0.0)
-        # self.synapses_weights += dW_pre - dW_post
-        # self.synapses_weights = np.clip(self.synapses_weights, self.wmin, self.wmax)
-        # return self.synapses_weights
-
 
 
 

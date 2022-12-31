@@ -1,14 +1,14 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int32, float32, int8, float64, int16, boolean, optional, types
 from helpers import jitclass, njit
 from snn.learning_rules.stdp import STDP
+from numba import int32, float32, int8, float64, int16, boolean, optional, types
+
 spec = OrderedDict([
     ('_id', int32),
     ('theta', float32),
     ('reset_to', float32),
-    ('n_synapses', int32),
     ('min_clip', float32),
     ('max_clip', float32),
     ('pn_generator', int32),
@@ -51,7 +51,6 @@ class SCTNeuron:
                  identity_const=32767, log_membrane_potential=False, log_rand_gauss_var=False,
                  log_out_spikes=False, membrane_should_reset=True):
         synapses_weights = synapses_weights.astype(np.float64)
-        self.n_synapses = len(synapses_weights)
         self.membrane_potential = 0.0
 
         self._id = -1
@@ -143,9 +142,9 @@ class SCTNeuron:
         if enable:
             if self.leakage_timer >= self.leakage_period:
                 if self.membrane_potential < 0:
-                    decay_delta = (-self.membrane_potential) // (2 ** self.leakage_factor)
+                    decay_delta = (-self.membrane_potential) / (2 ** self.leakage_factor)
                 else:
-                    decay_delta = -(self.membrane_potential // (2 ** self.leakage_factor))
+                    decay_delta = -(self.membrane_potential / (2 ** self.leakage_factor))
                 self.membrane_potential += decay_delta
                 self.leakage_timer = 0
             else:

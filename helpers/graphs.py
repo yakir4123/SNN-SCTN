@@ -57,6 +57,23 @@ class DirectedEdgeListGraph:
     def size(self):
         return len(self.out_edges)
 
+    def remove_any_connections(self, to_remove):
+        for nid in to_remove:
+            for target in self.out_edges[nid]:
+                self.in_edges[target] = np.delete(
+                    self.in_edges[target],
+                    np.where(self.in_edges[target] == nid)[0].astype(np.int32)
+                )
+
+            for source in self.in_edges[nid]:
+                self.out_edges[source] = np.delete(
+                    self.out_edges[source],
+                    np.where(self.out_edges[source] == nid)[0].astype(np.int32)
+                )
+            self.in_edges[nid] = njit_empty_array()
+            self.out_edges[nid] = njit_empty_array()
+            self.spikes[nid] = 0
+
 
 @njit
 def njit_empty_list():
@@ -71,15 +88,45 @@ def njit_empty_array():
 def plot_network(network):
     G = nx.DiGraph()
     pos = {}
+    nodes_color = {}
+    nodes_size = {}
+    nodes_labels = {}
 
+    input_size = len(network.layers_neurons[0].neurons[0].synapses_weights)
     column_length = max(len(layer.neurons) for layer in network.layers_neurons)
-    rows_length = len(network.layers_neurons)
-    plt.figure(figsize=(rows_length * 2, 4 * (1 + column_length // 4)), dpi=160)
+    column_length = max(column_length, input_size)/2
+    rows_length = len(network.layers_neurons) + 2   # +2 for input and output
+    plt.figure(figsize=(rows_length, 1 + (column_length // 1)), dpi=120)
+
     for i, layer in enumerate(network.layers_neurons):
         for j, neuron in enumerate(layer.neurons):
             gap = column_length/len(layer.neurons)
+            nodes_labels[neuron._id] = neuron.label or neuron._id
+            pos[neuron._id] = [i + 1, j * gap + gap/2]
+            nodes_color[neuron._id] = 'blue'
+            nodes_size[neuron._id] = 100
+
+    # Create nodes for "input" layer
+    for i in range(1, input_size + 1):
+        nodes_color[-i] = 'black'
+        nodes_size[-i] = 12
+        gap = column_length / input_size
+        pos[-i] = [0, (i - 1) * gap + gap / 2]
+
+        # Connect the input to first layer
+        for j, neuron in enumerate(network.layers_neurons[0].neurons):
             label = neuron.label or neuron._id
-            pos[label] = [i, j * gap + gap/2]
+            G.add_edge(-i, label, color='black')
+
+    # Create nodes for "output" layer
+    for i, neuron in enumerate(network.layers_neurons[-1].neurons):
+        target = len(network.neurons) + i
+        nodes_color[target] = 'black'
+        nodes_size[target] = 12
+        gap = column_length / len(network.layers_neurons[-1].neurons)
+        pos[target] = [len(network.layers_neurons) + 1, i * gap + gap / 2]
+        label = neuron.label or neuron._id
+        G.add_edge(label, target, color='black')
 
     for out_edge, in_edges in enumerate(network.spikes_graph.out_edges):
         for in_edge in in_edges:
@@ -94,13 +141,21 @@ def plot_network(network):
             G.add_edge(label_source, label_target, color='red')
 
     colors = nx.get_edge_attributes(G, 'color').values()
-
-    nx.draw(G, with_labels=False, font_weight='bold', pos=pos, edge_color=colors)
+    nodes_size = [nodes_size[n] for n in G.nodes]
+    nodes_color = [nodes_color[n] for n in G.nodes]
+    nx.draw(G,
+            with_labels=False,
+            font_weight='bold',
+            pos=pos,
+            edge_color=colors,
+            node_color=nodes_color,
+            node_size=nodes_size
+            )
 
     def nudge(pos, x_shift, y_shift):
         return {n: (x + x_shift, y + y_shift) for n, (x, y) in pos.items()}
 
     pos_nodes = nudge(pos, 0, 0)
-    nx.draw_networkx_labels(G, font_color="pink", pos=pos_nodes)  # nudged labels
+    nx.draw_networkx_labels(G, font_color="black", pos=pos_nodes, labels=nodes_labels)
 
     plt.show()

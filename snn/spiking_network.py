@@ -46,7 +46,7 @@ class SpikingNetwork:
     def add_amplitude(self, amplitude):
         self.amplitude = np.append(self.amplitude, np.float32(amplitude))
 
-    def add_layer(self, layer, add_neurons):
+    def add_layer(self, layer, add_neurons=True):
         for new_neuron in layer.neurons:
             if add_neurons:
                 self.add_neuron(new_neuron)
@@ -55,10 +55,19 @@ class SpikingNetwork:
         self.layers_neurons.append(layer)
         return self
 
-    def add_neuron(self, neuron):
-        self.neurons.append(neuron)
-        self.spikes_graph.add_node(neuron)
+    def add_neuron(self, new_neuron, layer=-1):
+        self.neurons.append(new_neuron)
+        self.spikes_graph.add_node(new_neuron)
         self.enable_by.append(-1)
+
+        if layer != -1:
+            self.layers_neurons[layer].neurons.append(new_neuron)
+            # connect all neurons from previous layer to this new neuron
+            if layer > 0:
+                [self.spikes_graph.connect(neuron, new_neuron) for neuron in self.layers_neurons[layer - 1].neurons]
+            # connect this neuron to all of next layer neurons from previous layer to this new neuron
+            if layer < len(self.layers_neurons) - 1:
+                [self.spikes_graph.connect(new_neuron, neuron) for neuron in self.layers_neurons[layer + 1].neurons]
 
     def add_network(self, network):
         new_id_offset = self.spikes_graph.add_graph(network.spikes_graph)
@@ -78,7 +87,7 @@ class SpikingNetwork:
             if i == len(self.layers_neurons):
                 self.layers_neurons.append(network.layers_neurons[i])
             else:
-                self.layers_neurons[i].merge(network.layers_neurons[i])
+                self.layers_neurons[i].concat(network.layers_neurons[i])
 
     def get_layer(self, i):
         return self.layers_neurons[i]
@@ -91,6 +100,20 @@ class SpikingNetwork:
 
     def connect_enable_by_id(self, source_id, target_id):
         self.enable_by[target_id] = source_id
+
+    def remove_irrelevant_neurons(self):
+        should_be_removed = [
+            nid
+            for layer in self.layers_neurons
+            for nid in layer.remove_irrelevant_neurons()
+        ]
+        self.neurons = numbaList([
+            neuron
+            for neuron in self.neurons
+            if neuron._id not in should_be_removed
+        ])
+
+        self.spikes_graph.remove_any_connections(should_be_removed)
 
     def input(self, spike_train):
         # first update that input neurons send spikes
@@ -112,10 +135,12 @@ class SpikingNetwork:
             classes += res
         return classes
 
-    def input_full_data_spikes(self, spike_train):
+    def input_full_data_spikes(self, spike_train, stop_on_first_spike=True):
         classes = np.zeros(len(self.layers_neurons[-1].neurons))
         for i, spikes in enumerate(spike_train):
             res = self.input(spikes)
+            if stop_on_first_spike and np.any(res):
+                return res.astype(np.float64)
             classes += res
         return classes
 
@@ -150,6 +175,8 @@ class SpikingNetwork:
     def reset_input(self):
         for neuron in self.neurons:
             neuron.index = 0
+            neuron.leakage_timer = 0
+            neuron.membrane_potential = 0
 
     def is_enable(self, neuron):
         # if nothing connected to enable gate or a there was a spike from the neuron that connected to enable gate

@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 from numba.core.types import int32
-from helpers import *
+from utils import *
 
 
 @jitclass(OrderedDict([

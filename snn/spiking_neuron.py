@@ -37,7 +37,6 @@ spec = OrderedDict([
     ('membrane_sample_max_window', float32[:]),
 ])
 
-
 IDENTITY = 0
 BINARY = 1
 SIGMOID = 2
@@ -94,7 +93,8 @@ class SCTNeuron:
             sample_window_size = len(self.membrane_sample_max_window)
             if self.index // sample_window_size == len(self._membrane_potential_graph):
                 self._membrane_potential_graph = np.concatenate((self._membrane_potential_graph,
-                                                                np.zeros(self.index // sample_window_size).astype('float32')))
+                                                                 np.zeros(self.index // sample_window_size).astype(
+                                                                     'float32')))
 
             self.membrane_sample_max_window[self.index % sample_window_size] = self.membrane_potential
             if self.index % sample_window_size == sample_window_size - 1:

@@ -157,10 +157,9 @@ def neurons_labels(neurons, encoder: Dict, spikes=None):
         ])
 
     return '\n'.join([
-        f'[{encoder[neuron.label]}: {spikes[i]}]'
+        f'[{encoder[neuron.label]}: {int(spikes[i])}]'
         for i, neuron in enumerate(neurons)
     ])
-
 
 
 def save_network_weights(network, path):

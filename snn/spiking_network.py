@@ -1,17 +1,17 @@
-from helpers import *
+from utils import *
 from snn.layers import SCTNLayer
 from collections import OrderedDict
 from numba import int8, int32, float32
-from helpers.graphs import DirectedEdgeListGraph
+from snn.graphs import DirectedEdgeListGraph
 from snn.spiking_neuron import SCTNeuron, create_SCTN
 
 
 @jitclass(OrderedDict([
     ('clk_freq', int32),
-    ('clk_freq_sine', float32[:]),
     ('clk_freq_i', int32),
     ('clk_freq_qrt', int8),
     ('amplitude', float32[:]),
+    ('clk_freq_sine', float32[:]),
     ('enable_by', numbaListType(int32)),
     ('neurons', numbaListType(SCTNeuron.class_type.instance_type)),
     ('spikes_graph', DirectedEdgeListGraph.class_type.instance_type),
@@ -101,11 +101,11 @@ class SpikingNetwork:
     def connect_enable_by_id(self, source_id, target_id):
         self.enable_by[target_id] = source_id
 
-    def remove_irrelevant_neurons(self):
+    def remove_irrelevant_neurons(self, weak_th=0):
         should_be_removed = [
             nid
             for layer in self.layers_neurons
-            for nid in layer.remove_irrelevant_neurons()
+            for nid in layer.remove_irrelevant_neurons(weak_th)
         ]
         self.neurons = numbaList([
             neuron
@@ -114,6 +114,7 @@ class SpikingNetwork:
         ])
 
         self.spikes_graph.remove_any_connections(should_be_removed)
+        return len(should_be_removed)
 
     def input(self, spike_train):
         # first update that input neurons send spikes

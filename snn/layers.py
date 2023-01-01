@@ -4,7 +4,7 @@ import numpy as np
 from numba import float32, types, jit
 from numba.typed import Dict
 from collections import OrderedDict
-from snn.spiking_neuron import SCTNeuron
+from snn.spiking_neuron import SCTNeuron, neuron_to_dict
 from helpers import jitclass, numbaListType, numbaList
 
 
@@ -21,18 +21,17 @@ class SCTNLayer:
         for neuron in layer.neurons:
             self.neurons.append(neuron)
 
-    def remove_irrelevant_neurons(self):
+    def remove_irrelevant_neurons(self, weak_th):
         should_be_removed = self.should_remove_duplicates()
-        should_be_removed += self.should_remove_zero_weights()
+        should_be_removed += self.should_remove_weak_neurons(weak_th)
         return should_be_removed
 
-    def should_remove_zero_weights(self):
+    def should_remove_weak_neurons(self, weak_th):
         should_be_removed = [0 for _ in range(0)]
         for neuron in self.neurons:
-            positive_weights = neuron.synapses_weights[neuron.synapses_weights > 0]
             # The synapses are irrelevant this neuron should be removed
             # No post spikes -> no learning
-            if np.sum(positive_weights) < 1:
+            if np.mean(neuron.synapses_weights) < weak_th:
                 should_be_removed.append(neuron._id)
 
         self.neurons = numbaList([
@@ -97,3 +96,4 @@ class SCTNLayer:
             if neuron._id not in should_be_removed
         ]
         return should_be_removed
+

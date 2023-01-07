@@ -4,8 +4,8 @@ import numpy as np
 from numba import float32, types, jit
 from numba.typed import Dict
 from collections import OrderedDict
-from snn.spiking_neuron import SCTNeuron, neuron_to_dict
-from helpers import jitclass, numbaListType, numbaList
+from snn.spiking_neuron import SCTNeuron
+from utils import jitclass, numbaListType, numbaList
 
 
 @jitclass(OrderedDict([

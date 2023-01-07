@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 from numba import int32, float32, float64
 
-from helpers import jitclass
+from utils import jitclass
 
 spec = OrderedDict([
     ('synapses_weights', float64[:]),

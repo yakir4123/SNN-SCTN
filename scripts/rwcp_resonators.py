@@ -43,7 +43,7 @@ def learning_neuron(frequencies, clk_freq):
 def snn_based_resonator_for_learning(frequencies, clk_freq):
     network = snn_based_resonators(frequencies, clk_freq)
     neuron = learning_neuron(frequencies, clk_freq)
-    network.add_layer(SCTNLayer([neuron]), True)
+    network.add_layer(SCTNLayer([neuron]))
     return network
 
 
@@ -65,5 +65,5 @@ def snn_based_resonator_for_test(frequencies, clk_freq):
         labeled_sctn_neuron('buzzer'),
         labeled_sctn_neuron('phone4'),
     ])
-    network.add_layer(coded_layer, True)
+    network.add_layer(coded_layer)
     return network

@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
-from helpers import jitclass, njit
+from utils import jitclass, njit
 from snn.learning_rules.stdp import STDP
 from numba import int32, float32, int8, float64, int16, boolean, optional, types
 

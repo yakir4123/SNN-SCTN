@@ -2,7 +2,7 @@ import json
 
 import numpy as np
 
-from helpers import njit
+from utils import njit
 from snn.layers import SCTNLayer
 from snn.spiking_network import SpikingNetwork
 from snn.spiking_neuron import IDENTITY, create_SCTN, BINARY
@@ -24,7 +24,7 @@ def create_base_resonator_by_parameters(
     network.add_amplitude(1000 * amplitude_gain)
     neuron = create_SCTN()
     neuron.activation_function = IDENTITY
-    network.add_neuron(neuron)
+    network.add_layer(SCTNLayer([neuron]))
 
     # SCTN 1
     neuron = create_SCTN()
@@ -33,7 +33,8 @@ def create_base_resonator_by_parameters(
     neuron.leakage_period = LP
     neuron.theta = -1 * theta_gain[0]
     neuron.activation_function = IDENTITY
-    network.add_neuron(neuron)
+    neuron.membrane_should_reset = False
+    network.add_layer(SCTNLayer([neuron]))
 
     # SCTN 2 - 4
     for i in range(3):
@@ -42,25 +43,12 @@ def create_base_resonator_by_parameters(
         neuron.leakage_factor = LF
         neuron.leakage_period = LP
         neuron.theta = -5 * theta_gain[1 + i]
-        neuron.activation_function = IDENTITY
-        network.add_neuron(neuron)
-
-    for neuron in network.neurons:
         neuron.membrane_should_reset = False
-
-    for i in range(0, 4):
-        network.connect_by_id(i, i + 1)
+        neuron.activation_function = IDENTITY
+        network.add_layer(SCTNLayer([neuron]))
 
     # feedback
-    network.connect(network.neurons[4],
-                    network.neurons[1])
-
-    layer0 = SCTNLayer([network.neurons[0]])
-    layer1 = SCTNLayer([network.neurons[i] for i in range(1, 4)])
-    layer2 = SCTNLayer([network.neurons[4]])
-    network.add_layer(layer0, False)
-    network.add_layer(layer1, False)
-    network.add_layer(layer2, False)
+    network.connect_by_id(4, 1)
 
     return network
 
@@ -87,7 +75,7 @@ def create_excitatory_resonator(freq0, clk_freq):
     neuron.reset_to = 30
     neuron.activation_function = BINARY
 
-    network.add_layer(SCTNLayer([neuron]), True)
+    network.add_layer(SCTNLayer([neuron]))
 
     return network
 
@@ -112,7 +100,7 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
     neuron.min_clip = 0
     neuron.label = 'f' + str(freq0)
 
-    network.add_layer(SCTNLayer([neuron]), True)
+    network.add_layer(SCTNLayer([neuron]))
 
     return network
 

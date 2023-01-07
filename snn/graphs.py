@@ -120,7 +120,7 @@ def plot_network(network):
 
     # Create nodes for "output" layer
     for i, neuron in enumerate(network.layers_neurons[-1].neurons):
-        target = len(network.neurons) + i
+        target = network.neurons_count + i
         nodes_color[target] = 'black'
         nodes_size[target] = 12
         gap = column_length / len(network.layers_neurons[-1].neurons)
@@ -130,14 +130,16 @@ def plot_network(network):
 
     for out_edge, in_edges in enumerate(network.spikes_graph.out_edges):
         for in_edge in in_edges:
-            label_source = network.neurons[out_edge].label or out_edge
-            label_target = network.neurons[in_edge].label or in_edge
+            # label_source = network.neurons[out_edge].label or out_edge
+            # label_target = network.neurons[in_edge].label or in_edge
+            label_source = network[out_edge].label or out_edge
+            label_target = network[in_edge].label or in_edge
             G.add_edge(label_source, label_target, color='black')
 
     for in_edge, out_edge in enumerate(network.enable_by):
         if out_edge != -1:
-            label_source = network.neurons[out_edge].label or out_edge
-            label_target = network.neurons[in_edge].label or in_edge
+            label_source = network[out_edge].label or out_edge
+            label_target = network[in_edge].label or in_edge
             G.add_edge(label_source, label_target, color='red')
 
     colors = nx.get_edge_attributes(G, 'color').values()

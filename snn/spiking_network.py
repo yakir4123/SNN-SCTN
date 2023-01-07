@@ -13,7 +13,6 @@ from snn.spiking_neuron import SCTNeuron, create_SCTN
     ('amplitude', float32[:]),
     ('clk_freq_sine', float32[:]),
     ('enable_by', numbaListType(int32)),
-    ('neurons', numbaListType(SCTNeuron.class_type.instance_type)),
     ('spikes_graph', DirectedEdgeListGraph.class_type.instance_type),
     ('layers_neurons', numbaListType(SCTNLayer.class_type.instance_type)),
 
@@ -31,7 +30,7 @@ class SpikingNetwork:
         """
         self.clk_freq = clk_freq
         # clk_freq // 4 points in [0, pi/2]
-        range_space = np.arange(clk_freq // 4) / (clk_freq // 4) * (np.pi/2)
+        range_space = np.arange(clk_freq // 4) / (clk_freq // 4) * (np.pi / 2)
         self.clk_freq_sine = np.sin(range_space).astype(np.float32)
         self.clk_freq_i = 0
         self.clk_freq_qrt = 0
@@ -39,24 +38,22 @@ class SpikingNetwork:
         self.spikes_graph = DirectedEdgeListGraph()
 
         # numba needs to identify what the list type, so create empty list
-        self.neurons = numbaList([create_SCTN() for _ in range(0)])
         self.layers_neurons = numbaList([SCTNLayer(None) for _ in range(0)])
         self.amplitude = np.array([np.float32(0) for _ in range(0)])
 
     def add_amplitude(self, amplitude):
         self.amplitude = np.append(self.amplitude, np.float32(amplitude))
 
-    def add_layer(self, layer, add_neurons=True):
+    def add_layer(self, layer):
         for new_neuron in layer.neurons:
-            if add_neurons:
-                self.add_neuron(new_neuron)
-            if add_neurons and len(self.layers_neurons) > 0:
+            self.add_neuron(new_neuron)
+            if len(self.layers_neurons) > 0:
                 [self.spikes_graph.connect(neuron, new_neuron) for neuron in self.layers_neurons[-1].neurons]
         self.layers_neurons.append(layer)
         return self
 
     def add_neuron(self, new_neuron, layer=-1):
-        self.neurons.append(new_neuron)
+        # self.neurons.append(new_neuron)
         self.spikes_graph.add_node(new_neuron)
         self.enable_by.append(-1)
 
@@ -107,11 +104,6 @@ class SpikingNetwork:
             for layer in self.layers_neurons
             for nid in layer.remove_irrelevant_neurons(weak_th)
         ]
-        self.neurons = numbaList([
-            neuron
-            for neuron in self.neurons
-            if neuron._id not in should_be_removed
-        ])
 
         self.spikes_graph.remove_any_connections(should_be_removed)
         return len(should_be_removed)
@@ -169,6 +161,27 @@ class SpikingNetwork:
             p = -p
         return p
 
+    def __getitem__(self, nid):
+        if nid < 0:
+            neurons = list(self.neurons)
+            return neurons[nid]
+        for layer in self.layers_neurons:
+            for neuron in layer.neurons:
+                if neuron._id == nid:
+                    return neuron
+
+    @property
+    def neurons(self):
+        return [
+            neuron
+            for layer in self.layers_neurons
+            for neuron in layer.neurons
+        ]
+
+    @property
+    def neurons_count(self):
+        return len(list(self.neurons))
+
     def reset_learning(self):
         for neuron in self.neurons:
             neuron.reset_learning()
@@ -184,13 +197,13 @@ class SpikingNetwork:
         return self.enable_by[neuron._id] == -1 or self.spikes_graph.spikes[self.enable_by[neuron._id]] == 1
 
     def log_membrane_potential(self, neurons_id):
-        self.neurons[neurons_id].log_membrane_potential = True
+        self[neurons_id].log_membrane_potential = True
 
     def log_rand_gauss_var(self, neurons_id):
-        self.neurons[neurons_id].log_rand_gauss_var = True
+        self[neurons_id].log_rand_gauss_var = True
 
     def log_out_spikes(self, neurons_id):
-        self.neurons[neurons_id].log_out_spikes = True
+        self[neurons_id].log_out_spikes = True
 
 
 def get_labels(network: SpikingNetwork):

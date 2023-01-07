@@ -1,15 +1,13 @@
 import os
 import json
 
-import numpy as np
 import yaml
 import optuna
 
 from pathlib import Path
 from optuna.samplers import CmaEsSampler
 
-from helpers import *
-from helpers.graphs import plot_network
+from utils import *
 from snn.spiking_neuron import IDENTITY, create_SCTN
 from snn.resonator import test_frequency, freq_of_resonator, \
     lf_lp_options, create_excitatory_resonator, create_base_resonator_by_parameters

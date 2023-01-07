@@ -6,8 +6,8 @@ import pandas as pd
 
 from tqdm import tqdm
 from itertools import product
-from helpers.graphs import plot_network
-from helpers import timing, load_audio_data, printable_weights
+from utils.graphs import plot_network
+from utils import timing, load_audio_data, printable_weights
 from scripts.rwcp_resonators import snn_based_resonator_for_learning, snn_based_resonator_for_test, labeled_sctn_neuron, \
     learning_neuron, create_neuron_for_labeling
 from snn.layers import SCTNLayer
@@ -21,7 +21,7 @@ def create_test_network(clk_freq):
         labeled_sctn_neuron('buzzer'),
         labeled_sctn_neuron('phone4'),
     ])
-    network.add_layer(layer, True)
+    network.add_layer(layer)
     return network
 
 
@@ -30,7 +30,7 @@ def create_learning_network(clk_freq, freqs):
     layer = SCTNLayer([
         learning_neuron(freqs, clk_freq),
     ])
-    network.add_layer(layer, True)
+    network.add_layer(layer)
     return network
 
 

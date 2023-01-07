@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-from helpers import load_audio_data
+from utils import load_audio_data
 from scripts.rwcp_resonators import snn_based_resonators
 
 
@@ -43,13 +43,16 @@ def generate_spikes(audio_label: str, audio_file: str):
 
 
 if __name__ == '__main__':
-    filter_labels = ['bottle1', 'buzzer', 'phone4']
+    # filter_labels = ['bottle1', 'buzzer', 'phone4']
+    filter_labels = [
+        'dice1', 'metal05',
+        'cherry1', 'bottle2'
+    ]
 
     args = [
         (audio_label, audio_file)
         for audio_label in filter_labels
         for audio_file in os.listdir(f'../datasets/RWCP/{audio_label}')
-        if audio_file != '000.raw'
     ]
 
     # for label in filter_labels:

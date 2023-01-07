@@ -6,7 +6,7 @@ from tqdm import tqdm
 from typing import List, Tuple
 from snn.layers import SCTNLayer
 from snn.spiking_network import SpikingNetwork
-from helpers import neurons_labels, save_network_weights, load_network_weights
+from utils import neurons_labels, save_network_weights, load_network_weights
 from scripts.rwcp_resonators import create_neuron_for_labeling
 
 
@@ -18,7 +18,7 @@ def create_random_network(freqs, clk_freq, n_neurons):
         create_neuron_for_labeling(np.random.random(len(freqs)) * 10 + 30)
         for _ in range(n_neurons)
     ]
-    network.add_layer(SCTNLayer(labels_neurons), True)
+    network.add_layer(SCTNLayer(labels_neurons))
     for neuron in network.layers_neurons[-1].neurons:
         network.log_out_spikes(neuron._id)
     return network

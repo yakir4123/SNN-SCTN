@@ -4,8 +4,8 @@ import numpy as np
 
 from tqdm import tqdm
 from itertools import product
-from helpers.graphs import plot_network
-from helpers import timing, load_audio_data, printable_weights
+from utils.graphs import plot_network
+from utils import timing, load_audio_data, printable_weights
 from scripts.rwcp_resonators import snn_based_resonator_for_learning, snn_based_resonator_for_test
 from snn.spiking_network import get_labels, SpikingNetwork
 

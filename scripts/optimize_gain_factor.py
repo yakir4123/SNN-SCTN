@@ -6,7 +6,7 @@ import optuna
 import numpy as np
 from optuna.samplers import CmaEsSampler, TPESampler
 
-from helpers import denoise_small_values, generate_sinc_filter, generate_filter, oversample
+from utils import denoise_small_values, generate_sinc_filter, generate_filter, oversample
 from snn.resonator import test_frequency, BaseResonator, lf_lp_options
 
 

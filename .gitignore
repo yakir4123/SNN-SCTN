@@ -11,12 +11,14 @@
 /matrices/*
 /plots/*
 
+/filters/*/figures/*
 *.pickle
 *.npz
 *.npy
 *.wav
 *.csv
 *.raw
+
 secret.yaml
 
 .membrane_potential

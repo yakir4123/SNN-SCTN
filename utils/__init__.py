@@ -1,7 +1,9 @@
+import json
 import os
 import pickle
 import time
 import wave
+from distutils.dir_util import copy_tree
 from functools import wraps
 from typing import List, Dict
 
@@ -104,6 +106,25 @@ def load_audio_data(audio_path, clk_freq,
     data = librosa.resample(data, orig_sr=sr, target_sr=freq, res_type='linear')
 
     return data
+
+
+def copy_filter_hp_to_other_clock_frequency(clk_old, clk_new):
+    copy_tree(f"../filters/clk_{clk_old}/parameters", f"../filters/clk_{clk_new}/parameters")
+    clk_new_dirname = f'../filters/clk_{clk_new}/parameters'
+    scale_factor = clk_new / clk_old
+    for fname in os.listdir(clk_new_dirname):
+        new_filter = int(fname[2:].split('.')[0]) * scale_factor
+
+        new_filter_file_name = f'{clk_new_dirname}/f_{new_filter:.3f}.json'
+        os.rename(f'{clk_new_dirname}/{fname}', new_filter_file_name)
+
+        with open(new_filter_file_name, 'r') as f:
+            filter_parameters = json.load(f)
+            filter_parameters['f0'] *= scale_factor
+            filter_parameters['f_resonator'] *= scale_factor
+
+        with open(new_filter_file_name, 'w') as f:
+            json.dump(filter_parameters, f)
 
 
 def generate_filter(*args, **kwargs):

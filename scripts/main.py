@@ -1,5 +1,6 @@
 import os
 import json
+import time
 
 import yaml
 import optuna
@@ -153,8 +154,13 @@ def plot_all_filters_json():
                           save_plt=f'filters/clk_{clk_pulse}/figures/f_{parameters["f0"]}.png')
 
 
-def custom_resonator_output_spikes(freq0):
-    my_resonator = create_excitatory_resonator(freq0=freq0, clk_freq=clk_pulse)
+def custom_resonator_output_spikes(
+        freq0,
+        clk_freq=int(1.536 * (10 ** 6)) * 2,
+        step=1/12_000,
+        save_figure=False):
+    my_resonator = create_excitatory_resonator(freq0=freq0, clk_freq=clk_freq)
+    # plot_network(my_resonator)
     # my_resonator = create_excitatory_inhibitory_resonator(freq0=freq0, clk_freq=clk_pulse)
     log_neuron_potentials = []
     for i in log_neuron_potentials:
@@ -169,7 +175,7 @@ def custom_resonator_output_spikes(freq0):
     spikes_neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
     t = timing(test_frequency, return_res=False, return_time=True)(my_resonator,
                                                                    start_freq=start_freq, step=step,
-                                                                   test_size=test_size, clk_freq=clk_pulse)
+                                                                   test_size=test_size, clk_freq=clk_freq)
 
     for i in log_neuron_potentials:
         membrane_neuron = my_resonator.neurons[i]
@@ -189,11 +195,22 @@ def custom_resonator_output_spikes(freq0):
     y_spikes = np.convolve(y_spikes, np.ones(spikes_window_size, dtype=int), 'valid')
     x = np.linspace(start_freq, start_freq + spectrum, len(y_spikes))
     plt.title(f'spikes in window of {spikes_window_size} freq: {freq0}')
-    plt.plot(x, y_spikes)
-    plt.show()
+    if save_figure:
+        # plt.savefig(f'../filters/clk_{clk_freq}/figures/f_{100}.PNG', bbox_inches='tight')
+        plt.savefig('plot.png', dpi=300, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.plot(x, y_spikes)
+        plt.show()
 
 
 if __name__ == '__main__':
+    for fname in os.listdir('../filters/clk_50000/parameters'):
+        f0 = float(fname[2:-5])
+        custom_resonator_output_spikes(f0, clk_freq=50000, step=1 / 500_000, save_figure=True)
+        break
+    time.sleep(1)
+    exit(0)
     freq0 = 3334
     LF = 2
     LP = 34

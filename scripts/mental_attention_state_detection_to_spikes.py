@@ -82,7 +82,7 @@ def get_EEG_data(data_root, filename):
     return dat
 
 
-data_root = '../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG Data/'
+data_root = '../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_Data/'
 files = os.listdir(data_root)
 
 

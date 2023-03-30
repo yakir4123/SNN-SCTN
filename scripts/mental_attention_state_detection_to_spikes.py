@@ -87,7 +87,7 @@ files = os.listdir(data_root)
 
 
 def get_trial_data(trial):
-    dat = get_EEG_data(data_root, files[trial])
+    dat = get_EEG_data(data_root, f'eeg_record{trial}.mat')
     return dat
 
 
@@ -134,18 +134,16 @@ ch_i = 1
 ch = channels[ch_i]
 subject_name = 4
 subject_trials = subject_map[subject_name]
-trial = subject_trials[1]
 
-print(f'=== [{subject_name}] work on {trial} trial ===')
-with tqdm(total=14 * 2 * (5 * 5)) as pbar:
-    for trial in [2, 30]:
+with tqdm(total=14 * 4 * (5 * 5)) as pbar:
+    for trial in [28, 32, 33, 34]:
         # subject_trials = subject_map[subject_name]
         # trial = subject_trials[3]
-        print(trial, files[trial])
+        print(trial)
         # for subject_name, subject_trials in subject_map.items():
         #     for trial in subject_trials:
         data = get_trial_data(trial)
-        for ch in data.columns:
+        for ch_i, ch in enumerate(data.columns):
             ch_data = data[ch].values
             data_resampled = resample_signal(16830 / 2, fs, ch_data)
             for clk_i, (clk_freq, list_of_f0) in enumerate(clk_resonators.items()):

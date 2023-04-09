@@ -1,14 +1,14 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int32, float32, int8, float64, int16, boolean, optional, types
-from helpers import jitclass, njit
+from utils import jitclass, njit
 from snn.learning_rules.stdp import STDP
+from numba import int32, float32, int8, float64, int16, boolean, optional, types
+
 spec = OrderedDict([
     ('_id', int32),
     ('theta', float32),
     ('reset_to', float32),
-    ('n_synapses', int32),
     ('min_clip', float32),
     ('max_clip', float32),
     ('pn_generator', int32),
@@ -37,7 +37,6 @@ spec = OrderedDict([
     ('membrane_sample_max_window', float32[:]),
 ])
 
-
 IDENTITY = 0
 BINARY = 1
 SIGMOID = 2
@@ -51,7 +50,6 @@ class SCTNeuron:
                  identity_const=32767, log_membrane_potential=False, log_rand_gauss_var=False,
                  log_out_spikes=False, membrane_should_reset=True):
         synapses_weights = synapses_weights.astype(np.float64)
-        self.n_synapses = len(synapses_weights)
         self.membrane_potential = 0.0
 
         self._id = -1
@@ -95,7 +93,8 @@ class SCTNeuron:
             sample_window_size = len(self.membrane_sample_max_window)
             if self.index // sample_window_size == len(self._membrane_potential_graph):
                 self._membrane_potential_graph = np.concatenate((self._membrane_potential_graph,
-                                                                np.zeros(self.index // sample_window_size).astype('float32')))
+                                                                 np.zeros(self.index // sample_window_size).astype(
+                                                                     'float32')))
 
             self.membrane_sample_max_window[self.index % sample_window_size] = self.membrane_potential
             if self.index % sample_window_size == sample_window_size - 1:
@@ -143,9 +142,9 @@ class SCTNeuron:
         if enable:
             if self.leakage_timer >= self.leakage_period:
                 if self.membrane_potential < 0:
-                    decay_delta = (-self.membrane_potential) // (2 ** self.leakage_factor)
+                    decay_delta = (-self.membrane_potential) / (2 ** self.leakage_factor)
                 else:
-                    decay_delta = -(self.membrane_potential // (2 ** self.leakage_factor))
+                    decay_delta = -(self.membrane_potential / (2 ** self.leakage_factor))
                 self.membrane_potential += decay_delta
                 self.leakage_timer = 0
             else:
@@ -161,6 +160,14 @@ class SCTNeuron:
                          wmax,
                          wmin,
                          )
+
+    def set_stdp_ltp(self, A_LTP):
+        if self.stdp is not None:
+            self.stdp.A_LTP = A_LTP
+
+    def set_stdp_ltd(self, A_LTD):
+        if self.stdp is not None:
+            self.stdp.A_LTD = A_LTD
 
     def reset_learning(self):
         if self.stdp is not None:

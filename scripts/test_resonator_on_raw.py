@@ -5,9 +5,9 @@ import librosa
 import numpy as np
 from matplotlib import pyplot as plt
 
-from helpers import load_audio_data
-from helpers.graphs import plot_network
-from scripts.rwcp_resonators import snn_based_resonator
+from utils import load_audio_data
+from utils.graphs import plot_network
+from scripts.rwcp_resonators import snn_based_resonators
 
 
 if __name__ == '__main__':
@@ -21,7 +21,7 @@ if __name__ == '__main__':
         audio_path = f"../sounds/RWCP/{label}/{audio_file}.raw"
         data = load_audio_data(audio_path, clk_freq)
         data = data[:len(data)//2]
-        network = snn_based_resonator(frequencies, clk_freq)
+        network = snn_based_resonators(frequencies, clk_freq)
         last_layer_neurons = network.layers_neurons[-1].neurons
         plot_network(network)
         for neuron in last_layer_neurons:

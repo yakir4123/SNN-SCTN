@@ -120,6 +120,38 @@ def generate_spikes(resonator, data_resampled, spikes_output_path=None):
         )
 
 
+def create_datasets(time_of_sample_s, overlap, trials, output_path):
+    trials_folder = '../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes'
+    signal_fs = 8415
+    spikes_in_sample = signal_fs * time_of_sample_s
+    step = int(spikes_in_sample * (1 - overlap))
+    for trial in tqdm(trials):
+        # every sample of 1s is 8Kb of memory!
+        # try:
+        # for ch_name in os.listdir(f'{trials_folder}/{trial}'):
+        #     for clk_freq in os.listdir(f'{trials_folder}/{trial}/{ch}'):
+        #         for f0 in os.listdir(f'{trials_folder}/{trial}/{ch}/{clk_freq}'):
+        #             np.load(f'{trials_folder}/{trial}/{ch_name}/{clk_freq}/{f0}')['spikes'].astype(np.int8)
+        # except ValueError:
+        #     raise ValueError(f'Exception at {trials_folder}/{trial}/{ch_name}/{clk_freq}/{f0}')
+
+        spikes = np.array([
+            [
+                np.load(f'{trials_folder}/{trial}/{ch_name}/{clk_freq}/{f0}')['spikes'].astype(np.int8)
+                for clk_freq in os.listdir(f'{trials_folder}/{trial}/{ch}')
+                for f0 in os.listdir(f'{trials_folder}/{trial}/{ch}/{clk_freq}')
+            ]
+            for ch_name in os.listdir(f'{trials_folder}/{trial}')
+        ])
+        for sample_start_index in range(0, spikes.shape[-1] - spikes_in_sample, step):
+            sample_start_time = int(sample_start_index / signal_fs * 1000)
+            file_name = f'{trial}_{sample_start_time}'
+            np.savez_compressed(
+                file=f'{output_path}/{file_name}',
+                spikes=spikes[:, :, sample_start_time:sample_start_time + spikes_in_sample]
+            )
+
+
 clk_resonators = {
     16830: ['0.657', '1.523', '2.120', '2.504', '3.490'],
     88402: ['4.604', '5.180', '5.755', '6.791', '8.000'],
@@ -135,13 +167,13 @@ ch = channels[ch_i]
 subject_name = 4
 subject_trials = subject_map[subject_name]
 
-with tqdm(total=14 * 4 * (5 * 5)) as pbar:
-    for trial in [28, 32, 33, 34]:
-        # subject_trials = subject_map[subject_name]
-        # trial = subject_trials[3]
+trails = []
+
+n_channels = 14
+n_resonators = 5 * 5
+with tqdm(total=n_channels * len(trails) * n_resonators) as pbar:
+    for trial in trails:
         print(trial)
-        # for subject_name, subject_trials in subject_map.items():
-        #     for trial in subject_trials:
         data = get_trial_data(trial)
         for ch_i, ch in enumerate(data.columns):
             ch_data = data[ch].values
@@ -161,3 +193,5 @@ with tqdm(total=14 * 4 * (5 * 5)) as pbar:
                         clk_freq=clk_freq)
                     resonator.log_out_spikes(-1)
                     generate_spikes(resonator, data_resampled, spikes_file)
+
+create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')

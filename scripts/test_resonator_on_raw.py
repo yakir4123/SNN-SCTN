@@ -5,8 +5,8 @@ import librosa
 import numpy as np
 from matplotlib import pyplot as plt
 
+from snn.graphs import plot_network
 from utils import load_audio_data
-from utils.graphs import plot_network
 from scripts.rwcp_resonators import snn_based_resonators
 
 

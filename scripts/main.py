@@ -210,13 +210,12 @@ if __name__ == '__main__':
         custom_resonator_output_spikes(f0, clk_freq=50000, step=1 / 500_000, save_figure=True)
         break
     time.sleep(1)
-    exit(0)
     freq0 = 3334
     LF = 2
     LP = 34
 
     start_freq = 0
-    spectrum = 7000
+    spectrum = 400
     step = 1 / 12_000
     clk_pulse = int(1.536 * (10 ** 6)) * 2
     test_size = int(spectrum / step)

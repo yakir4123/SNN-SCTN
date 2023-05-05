@@ -167,7 +167,13 @@ ch = channels[ch_i]
 subject_name = 4
 subject_trials = subject_map[subject_name]
 
-trails = []
+trails = [
+        3,4,5,
+        10,11,12,
+        17,18,19,
+        24,25,26,
+        31,32
+    ]
 
 n_channels = 14
 n_resonators = 5 * 5
@@ -177,9 +183,9 @@ with tqdm(total=n_channels * len(trails) * n_resonators) as pbar:
         data = get_trial_data(trial)
         for ch_i, ch in enumerate(data.columns):
             ch_data = data[ch].values
-            data_resampled = resample_signal(16830 / 2, fs, ch_data)
+            data_resampled = resample_signal(331510//2, fs, ch_data)
             for clk_i, (clk_freq, list_of_f0) in enumerate(clk_resonators.items()):
-                spikes_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes/{trial}/{ch}/{clk_freq}'
+                spikes_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes_696172/{trial}/{ch}/{clk_freq}'
                 if not os.path.exists(spikes_folder):
                     os.makedirs(spikes_folder)
                 for f_i, f0 in enumerate(list_of_f0):
@@ -194,4 +200,4 @@ with tqdm(total=n_channels * len(trails) * n_resonators) as pbar:
                     resonator.log_out_spikes(-1)
                     generate_spikes(resonator, data_resampled, spikes_file)
 
-create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')
+# create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')

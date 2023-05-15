@@ -112,11 +112,12 @@ def resample_signal(f_new, f_source, data):
 
 def generate_spikes(resonator, data_resampled, spikes_output_path=None):
     output_neuron = resonator.layers_neurons[-1].neurons[-1]
+    resonator.input_full_data(np.zeros(resonator.clk_freq * 5))
     resonator.input_full_data(data_resampled)
     if spikes_output_path is not None:
         np.savez_compressed(
             file=spikes_output_path,
-            spikes=output_neuron.out_spikes[:output_neuron.index]
+            spikes=output_neuron.out_spikes[resonator.clk_freq * 5:output_neuron.index]
         )
 
 
@@ -153,44 +154,67 @@ def create_datasets(time_of_sample_s, overlap, trials, output_path):
 
 
 clk_resonators = {
-    16830: ['0.657', '1.523', '2.120', '2.504', '3.490'],
-    88402: ['4.604', '5.180', '5.755', '6.791', '8.000'],
-    154705: ['8.058', '9.065', '10.072', '11.885', '14.000'],
-    331510: ['15.108', '17.266', '19.424', '21.583', '25.468'],
-    696172: ['36.259', '40.791', '45.324', '53.482', '63.000']
+    # 76800: ['4.000', '4.500', '5.000', '5.900', '6.950'],
+    153600: ['8.000', '9.000', '10.000', '11.800', '13.900'],
+    307200: ['16.000', '18.000', '20.000', '23.600', '27.800'],
+    # 614400: ['32.000', '36.000', '40.000', '47.200', '55.600'],
 }
 
 fs = 128
-channels = ['AF3', 'F7', 'F3', 'FC5', 'T7', 'P7', 'O1', 'O2', 'P8', 'T8', 'FC6', 'F4', 'F8', 'AF4']
-ch_i = 1
-ch = channels[ch_i]
-subject_name = 4
-subject_trials = subject_map[subject_name]
+channels = [
+    'AF3', 'F7',
+    'F3', 'FC5',
+    'T7', 'P7',
+    'O1', 'O2',
+    'P8', 'T8',
+    'FC6', 'F4',
+    'F8', 'AF4'
+]
 
 trails = [
-        3,4,5,
-        10,11,12,
-        17,18,19,
-        24,25,26,
-        31,32
+    3,
+        # 3,4,5,
+        # 10,11,12,
+        # 17,18,19,
+        # 24,25,26,
+        # 31,32
     ]
 
-n_channels = 14
-n_resonators = 5 * 5
+print('Find constant normalization value!')
+normalization_value = -np.inf
+for trial in trails:
+    data = get_trial_data(trial)
+    for ch_i, ch in enumerate(data.columns):
+        ch_data = data[ch].values
+        normalization_value = np.max([normalization_value, np.max(np.abs(ch_data))])
+
+
+channels = [
+    'AF3', 'F7',
+    'F3', 'FC5',
+    'T7', 'P7',
+    'O1', 'O2',
+    'P8', 'T8',
+    'FC6', 'F4',
+    'F8', 'AF4'
+]
+
+n_channels = len(channels)
+n_resonators = len(sum(clk_resonators.values(), start=[]))
 with tqdm(total=n_channels * len(trails) * n_resonators) as pbar:
     for trial in trails:
-        print(trial)
         data = get_trial_data(trial)
         for ch_i, ch in enumerate(data.columns):
             ch_data = data[ch].values
-            data_resampled = resample_signal(331510//2, fs, ch_data)
+            # Take only first 30 minutes.
+            ch_data = ch_data[:fs * (60 * 30)]
+            ch_data /= normalization_value
             for clk_i, (clk_freq, list_of_f0) in enumerate(clk_resonators.items()):
-                spikes_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes_696172/{trial}/{ch}/{clk_freq}'
+                data_resampled = resample_signal(clk_freq, fs, ch_data)
+                spikes_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes_clk/{trial}/{ch}/{clk_freq}'
                 if not os.path.exists(spikes_folder):
                     os.makedirs(spikes_folder)
                 for f_i, f0 in enumerate(list_of_f0):
-                    pbar.set_description(f'trial: {trial}, ch: {ch_i}/14 clk {clk_i}/5 f:{f_i}/5')
-                    pbar.update()
                     spikes_file = f'{spikes_folder}/{f0}.npz'
                     if Path(spikes_file).is_file():
                         continue
@@ -199,5 +223,8 @@ with tqdm(total=n_channels * len(trails) * n_resonators) as pbar:
                         clk_freq=clk_freq)
                     resonator.log_out_spikes(-1)
                     generate_spikes(resonator, data_resampled, spikes_file)
+
+                    pbar.set_description(f'trial: {trial}, ch: {ch_i}/{n_channels} clk {clk_i}/{len(clk_resonators)} f {f_i}/{len(list_of_f0)}')
+                    pbar.update()
 
 # create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')

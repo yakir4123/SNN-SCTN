@@ -32,7 +32,7 @@ def generate_spikes(audio_label: str, audio_file: str):
     network.input_full_data(data)
 
     output_spikes = {
-        n.label: n.out_spikes[:n.index]
+        n.label: n.out_spikes()
         for n in output_neurons
     }
     Path(f'../datasets/RWCP_spikes/{audio_label}').mkdir(parents=True, exist_ok=True)

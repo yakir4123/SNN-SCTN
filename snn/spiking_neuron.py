@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 from utils import jitclass, njit
 from snn.learning_rules.stdp import STDP
-from numba import int32, float32, int8, float64, int16, boolean, optional, types
+from numba import int32, float32, int8, float64, int16, boolean, optional, types, int64
 
 spec = OrderedDict([
     ('_id', int32),
@@ -27,7 +27,8 @@ spec = OrderedDict([
     ('stdp', optional(STDP.class_type.instance_type)),
 
     ('index', int32),
-    ('out_spikes', int8[:]),
+    ('_out_spikes', int64[:]),
+    ('_out_spikes_index', int32),
     ('log_out_spikes', boolean),
     ('log_rand_gauss_var', boolean),
     ('label', optional(types.string)),
@@ -75,9 +76,10 @@ class SCTNeuron:
         self.log_out_spikes = log_out_spikes
         self._membrane_potential_graph = np.zeros(100).astype('float32')
         self.membrane_sample_max_window = np.zeros(10000).astype('float32')
-        self.out_spikes = np.zeros(100).astype('int8')
+        self._out_spikes = np.zeros(100).astype('int64')
         self.rand_gauss_var_graph = np.zeros(100).astype('int32')
         self.index = 0
+        self._out_spikes_index = 0
         self.min_clip = -524287
         self.max_clip = 524287
 
@@ -107,10 +109,12 @@ class SCTNeuron:
                                                             np.zeros(self.index).astype('int32')))
             self.rand_gauss_var_graph[self.index] = self.rand_gauss_var
         if self.log_out_spikes:
-            if self.index == len(self.out_spikes):
-                self.out_spikes = np.concatenate((self.out_spikes,
-                                                  np.zeros(self.index).astype('int8')))
-            self.out_spikes[self.index] = emit_spike
+            if self._out_spikes_index == len(self._out_spikes):
+                self._out_spikes = np.concatenate((self._out_spikes,
+                                                  np.zeros(self._out_spikes_index).astype('int64')))
+            if emit_spike:
+                self._out_spikes[self._out_spikes_index] = self.index
+                self._out_spikes_index += 1
 
         if self.membrane_should_reset and emit_spike > 0:
             self.membrane_potential = self.reset_to
@@ -213,6 +217,13 @@ class SCTNeuron:
 
     def membrane_potential_graph(self):
         return self._membrane_potential_graph[:self.index // len(self.membrane_sample_max_window)]
+
+    def out_spikes(self):
+        return self._out_spikes[:self._out_spikes_index]
+
+    def forget_logs(self):
+        self._out_spikes_index = 0
+        self.index = 0
 
 
 @njit

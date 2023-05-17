@@ -51,7 +51,7 @@ def test_input(network: SpikingNetwork, spikes):
     argmin_first_spikes = np.inf
 
     for neuron in network.layers_neurons[-1].neurons:
-        neurons_spikes = neuron.out_spikes[neuron.index]
+        neurons_spikes = neuron.out_spikes()
         first_spike = np.argmax(neurons_spikes)
         if first_spike < argmin_first_spikes:
             argmin_first_spikes = first_spike
@@ -86,7 +86,7 @@ def make_neuron_learn(network: SpikingNetwork, audio_label, signals, epochs):
                 classes = network.input_full_data_spikes(spikes)
                 if signal == compare_epochs_by:
                     np.savez_compressed(f'output_spikes/{signal}_{audio_label}_{epoch}.npz',
-                                        post_spikes=neuron.out_spikes[:neuron.index],
+                                        post_spikes=neuron.out_spikes(),
                                         membrane_potential=neuron.membrane_potential_graph()
                                         )
                 network.reset_learning()

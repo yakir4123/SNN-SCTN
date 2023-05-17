@@ -30,7 +30,7 @@ def identity_test():
         for i in range(1000):
             neuron.ctn_cycle(np.array([0]), True)
             res_gauss[theta // theta_step, i] = neuron.rand_gauss_var
-        res_spikes[theta // theta_step] = np.sum(neuron.out_spikes[:1000])
+        res_spikes[theta // theta_step] = np.sum(neuron.out_spikes())
     return res_gauss, res_spikes
 
 
@@ -76,7 +76,7 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
     plt.show()
     return
     # plot emitted spikes
-    y = neuron.out_spikes[:neuron.index]
+    y = neuron.out_spikes()
     y = np.convolve(y, np.ones(5000, dtype=int), 'valid')
     x = np.linspace(start_freq, start_freq + spectrum, len(y))
     plt.plot(x, y)
@@ -185,7 +185,7 @@ def custom_resonator_output_spikes(
         plt.plot(x, y_membrane)
         plt.show()
 
-    y_spikes = spikes_neuron.out_spikes[:spikes_neuron.index]
+    y_spikes = spikes_neuron.out_spikes()
 
     # np.savez_compressed(f'output_{freq0}.npz',
     #                     membrane=y_membrane,

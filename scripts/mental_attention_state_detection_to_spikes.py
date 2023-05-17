@@ -110,15 +110,15 @@ def resample_signal(f_new, f_source, data):
     return resample(data, n_samples_new)
 
 
-def generate_spikes(resonator, data_resampled, spikes_output_path=None):
-    output_neuron = resonator.layers_neurons[-1].neurons[-1]
-    resonator.input_full_data(np.zeros(resonator.clk_freq * 5))
+def generate_spikes(resonator, data_resampled, append_with_zeros=True):
     resonator.input_full_data(data_resampled)
-    if spikes_output_path is not None:
-        np.savez_compressed(
-            file=spikes_output_path,
-            spikes=output_neuron.out_spikes[resonator.clk_freq * 5:output_neuron.index]
-        )
+
+def save_output(resonator, spikes_output_path):
+    output_neuron = resonator.layers_neurons[-1].neurons[-1]
+    np.savez_compressed(
+        file=spikes_output_path,
+        spikes=output_neuron.out_spikes()
+    )
 
 
 def create_datasets(time_of_sample_s, overlap, trials, output_path):
@@ -152,12 +152,17 @@ def create_datasets(time_of_sample_s, overlap, trials, output_path):
                 spikes=spikes[:, :, sample_start_time:sample_start_time + spikes_in_sample]
             )
 
+def is_file_exist(path: str):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path.is_file()
+
 
 clk_resonators = {
-    # 76800: ['4.000', '4.500', '5.000', '5.900', '6.950'],
+    76800: ['4.000', '4.500', '5.000', '5.900', '6.950'],
     153600: ['8.000', '9.000', '10.000', '11.800', '13.900'],
     307200: ['16.000', '18.000', '20.000', '23.600', '27.800'],
-    # 614400: ['32.000', '36.000', '40.000', '47.200', '55.600'],
+    614400: ['32.000', '36.000', '40.000', '47.200', '55.600'],
 }
 
 fs = 128
@@ -169,6 +174,7 @@ channels = [
     'P8', 'T8',
     'FC6', 'F4',
     'F8', 'AF4'
+    'FC6', 'F4',
 ]
 
 trails = [
@@ -190,41 +196,59 @@ for trial in trails:
 
 
 channels = [
-    'AF3', 'F7',
-    'F3', 'FC5',
-    'T7', 'P7',
-    'O1', 'O2',
-    'P8', 'T8',
-    'FC6', 'F4',
-    'F8', 'AF4'
+    # 'FC6',
+    # 'F4',
+    # 'F8',
+    # 'AF4'
+    # 'AF3',
+    # 'F7',
+    # 'F3',
+    # 'FC5',
+    # 'T7',
+    # 'P7',
+    # 'O1',
+    # 'O2',
+    'P8',
+    # 'T8',
 ]
 
 n_channels = len(channels)
 n_resonators = len(sum(clk_resonators.values(), start=[]))
-with tqdm(total=n_channels * len(trails) * n_resonators) as pbar:
+
+minutes_range = {
+    # 'focus': [3,4,8,9],
+    # 'unfocus': [13,14,18,19],
+    'drowesed': [23, 24,28,29],
+}
+print(channels)
+total_minutes = sum(map(len, minutes_range.values()))
+with tqdm(total=n_channels * len(trails) * n_resonators * total_minutes) as pbar:
     for trial in trails:
         data = get_trial_data(trial)
-        for ch_i, ch in enumerate(data.columns):
+        for ch_i, ch in enumerate(channels):
             ch_data = data[ch].values
             # Take only first 30 minutes.
             ch_data = ch_data[:fs * (60 * 30)]
             ch_data /= normalization_value
             for clk_i, (clk_freq, list_of_f0) in enumerate(clk_resonators.items()):
-                data_resampled = resample_signal(clk_freq, fs, ch_data)
-                spikes_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes_clk/{trial}/{ch}/{clk_freq}'
-                if not os.path.exists(spikes_folder):
-                    os.makedirs(spikes_folder)
                 for f_i, f0 in enumerate(list_of_f0):
-                    spikes_file = f'{spikes_folder}/{f0}.npz'
-                    if Path(spikes_file).is_file():
-                        continue
                     resonator = create_excitatory_inhibitory_resonator(
                         freq0=f0,
                         clk_freq=clk_freq)
-                    resonator.log_out_spikes(-1)
-                    generate_spikes(resonator, data_resampled, spikes_file)
 
-                    pbar.set_description(f'trial: {trial}, ch: {ch_i}/{n_channels} clk {clk_i}/{len(clk_resonators)} f {f_i}/{len(list_of_f0)}')
-                    pbar.update()
+                    resonator.log_out_spikes(-1)
+                    output_neuron = resonator.layers_neurons[-1].neurons[-1]
+                    resonator.input_full_data(np.zeros(resonator.clk_freq * 5))
+                    output_neuron.forget_logs()
+                    # minute by minute input the data.
+                    for label, labeled_minutes_range in minutes_range.items():
+                        for m in labeled_minutes_range:
+                            output_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes_clk/{trial}/{label}/{m}/{ch}/{clk_freq}/{f0}.npz'
+                            if not is_file_exist(output_folder):
+                                data_resampled = resample_signal(clk_freq, fs, ch_data[fs * m * 60: fs * (m+1) * 60])
+                                resonator.input_full_data(data_resampled)
+                            save_output(resonator, output_folder)
+                            output_neuron.forget_logs()
+                            pbar.update()
 
 # create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')

@@ -178,7 +178,8 @@ channels = [
 ]
 
 trails = [
-    3,
+    # 3,
+    4,5,6,7
         # 3,4,5,
         # 10,11,12,
         # 17,18,19,
@@ -208,17 +209,17 @@ channels = [
     # 'P7',
     # 'O1',
     # 'O2',
-    'P8',
-    # 'T8',
+    # 'P8',
+    'T8',
 ]
 
 n_channels = len(channels)
 n_resonators = len(sum(clk_resonators.values(), start=[]))
 
 minutes_range = {
-    # 'focus': [3,4,8,9],
-    # 'unfocus': [13,14,18,19],
-    'drowesed': [23, 24,28,29],
+    'focus': [3,4,5,6,7,8,9],
+    'unfocus': [13,14,15,16,17,18,19],
+    'drowesed': [23, 24,25,26,27,28,29],
 }
 print(channels)
 total_minutes = sum(map(len, minutes_range.values()))

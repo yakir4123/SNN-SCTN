@@ -69,12 +69,12 @@ def get_EEG_data(data_root, filename):
     dat.columns = labels
 
     # Filter the data, high pass 2 Hz, low pass 40 Hz.
-    lo, hi = 2, 40
+    # lo, hi = 2, 40
     # Do the filtering.
-    datf = bp_filter(dat.to_numpy(), lo, hi, hz)
+    # datf = bp_filter(dat.to_numpy(), lo, hi, hz)
 
     # Convert back to a dataframe.
-    dat = pd.DataFrame({c: datf[:, i] for i, c in enumerate(labels)})
+    # dat = pd.DataFrame({c: datf[:, i] for i, c in enumerate(labels)})
 
     # Z-transform each column
     # dat = dat.apply(zscore)
@@ -178,13 +178,11 @@ channels = [
 ]
 
 trails = [
-    # 3,
-    4,5,6,7
-        # 3,4,5,
-        # 10,11,12,
-        # 17,18,19,
-        # 24,25,26,
-        # 31,32
+    3,4,5,6,7,
+        10,11,12,13,14,
+        17,18,19,20,21,
+        24,25,26,27,28,
+        31,32,33,34
     ]
 
 print('Find constant normalization value!')

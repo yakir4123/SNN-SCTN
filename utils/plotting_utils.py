@@ -24,11 +24,12 @@ def topography_map(dat, fig=None, ax=None, feature='std', vmin=0, vmax=1):
         np.std(my_dat, axis=1),
         np.mean(my_dat, axis=1),
         np.median(my_dat, axis=1),
+        np.var(my_dat, axis=1),
     ], axis=0)
 
 
     chs = ['AF3', 'F7', 'F3', 'FC5', 'T7', 'P7', 'O1', 'O2', 'P8', 'T8', 'FC6', 'F4', 'F8', 'AF4']
-    features =['min', 'max', 'std', 'mean', 'median']
+    features =['min', 'max', 'std', 'mean', 'median', 'var']
     df0=pd.DataFrame(np.transpose(eeg_features), columns=features, index=chs)
 
 
@@ -76,6 +77,7 @@ def topography_map(dat, fig=None, ax=None, feature='std', vmin=0, vmax=1):
             if (r - dr/2) > radius:
                 zi[j,i] = "nan"
 
+    # return np.nanmin(zi), np.nanmax(zi)
     # use different number of levels for the fill and the lines
     levels = np.linspace(vmin, vmax, 60)
     CS = ax.contourf(xi, yi, zi, levels=levels, cmap=plt.cm.jet, zorder=1)#, vmin=vmin, vmax=vmax)

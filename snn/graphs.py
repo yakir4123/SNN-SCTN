@@ -102,57 +102,71 @@ def plot_network(network):
         for j, neuron in enumerate(layer.neurons):
             gap = column_length/len(layer.neurons)
             nodes_labels[neuron._id] = neuron.label or neuron._id
+            # pos[nodes_labels[neuron._id]] = [i + 1, j * gap + gap/2]
+            # nodes_color[nodes_labels[neuron._id]] = 'blue'
+            # nodes_size[nodes_labels[neuron._id]] = 100
             pos[neuron._id] = [i + 1, j * gap + gap/2]
             nodes_color[neuron._id] = 'blue'
             nodes_size[neuron._id] = 100
 
-    # Create nodes for "input" layer
-    for i in range(1, input_size + 1):
-        nodes_color[-i] = 'black'
-        nodes_size[-i] = 12
-        gap = column_length / input_size
-        pos[-i] = [0, (i - 1) * gap + gap / 2]
+    # # Create nodes for "input" layer
+    # for i in range(1, input_size + 1):
+    #     nodes_color[-i] = 'black'
+    #     nodes_size[-i] = 12
+    #     gap = column_length / input_size
+    #     pos[-i] = [0, (i - 1) * gap + gap / 2]
+    #
+    #     # Connect the input to first layer
+    #     for j, neuron in enumerate(network.layers_neurons[0].neurons):
+    #         label = neuron.label or neuron._id
+    #         G.add_edge(-i, label, color='black')
 
-        # Connect the input to first layer
-        for j, neuron in enumerate(network.layers_neurons[0].neurons):
-            label = neuron.label or neuron._id
-            G.add_edge(-i, label, color='black')
-
-    # Create nodes for "output" layer
-    for i, neuron in enumerate(network.layers_neurons[-1].neurons):
-        target = network.neurons_count + i
-        nodes_color[target] = 'black'
-        nodes_size[target] = 12
-        gap = column_length / len(network.layers_neurons[-1].neurons)
-        pos[target] = [len(network.layers_neurons) + 1, i * gap + gap / 2]
-        label = neuron.label or neuron._id
-        G.add_edge(label, target, color='black')
+    # # Create nodes for "output" layer
+    # for i, neuron in enumerate(network.layers_neurons[-1].neurons):
+    #     target = network.neurons_count + i
+    #     nodes_color[target] = 'black'
+    #     nodes_size[target] = 12
+    #     gap = column_length / len(network.layers_neurons[-1].neurons)
+    #     pos[target] = [len(network.layers_neurons) + 1, i * gap + gap / 2]
+    #     label = neuron.label or neuron._id
+    #     G.add_edge(label, target, color='black')
 
     for out_edge, in_edges in enumerate(network.spikes_graph.out_edges):
         for in_edge in in_edges:
-            # label_source = network.neurons[out_edge].label or out_edge
-            # label_target = network.neurons[in_edge].label or in_edge
-            label_source = network[out_edge].label or out_edge
-            label_target = network[in_edge].label or in_edge
-            G.add_edge(label_source, label_target, color='black')
+            # label_source = network[out_edge].label or out_edge
+            # label_target = network[in_edge].label or in_edge
+            # G.add_edge(label_source, label_target, color='black')
+            G.add_edge(out_edge, in_edge, color='black')
 
     for in_edge, out_edge in enumerate(network.enable_by):
         if out_edge != -1:
-            label_source = network[out_edge].label or out_edge
-            label_target = network[in_edge].label or in_edge
-            G.add_edge(label_source, label_target, color='red')
+            # label_source = network[out_edge].label or out_edge
+            # label_target = network[in_edge].label or in_edge
+            # G.add_edge(label_source, label_target, color='red')
+            G.add_edge(out_edge, in_edge, color='red')
 
     colors = nx.get_edge_attributes(G, 'color').values()
     nodes_size = [nodes_size[n] for n in G.nodes]
     nodes_color = [nodes_color[n] for n in G.nodes]
-    nx.draw(G,
-            with_labels=False,
-            font_weight='bold',
-            pos=pos,
-            edge_color=colors,
-            node_color=nodes_color,
-            node_size=nodes_size
-            )
+    next_layer_edges = [(e1, e2) for (e1, e2) in G.edges if e1 < e2]
+    feedback_edges = [(e1, e2) for (e1, e2) in G.edges if e1 > e2]
+    nx.draw_networkx_nodes(G,
+                           pos=pos,
+                           node_color=nodes_color,
+                           node_size=nodes_size,
+                           )
+    nx.draw_networkx_edges(G, pos, edgelist=next_layer_edges, width=2, alpha=0.5)
+    nx.draw_networkx_edges(G, pos, connectionstyle='arc3, rad = 0.2', edgelist=feedback_edges, width=2, alpha=0.5)
+
+    # nx.draw(G,
+    #         with_labels=False,
+    #         font_weight='bold',
+    #         pos=pos,
+    #         edge_color=colors,
+    #         node_color=nodes_color,
+    #         node_size=nodes_size,
+    #         connectionstyle='arc3, rad = 0.1'
+    #         )
 
     def nudge(pos, x_shift, y_shift):
         return {n: (x + x_shift, y + y_shift) for n, (x, y) in pos.items()}

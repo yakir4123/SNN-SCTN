@@ -106,12 +106,12 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
 
 
 @njit
-def test_frequency(network, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000):
+def test_resonator_on_chirp(network, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000):
     batch_size = 50_000
     shift = 0
     while test_size > 0:
         sine_size = min(batch_size, test_size)
-        sine_wave, freqs = create_sine_wave(sine_size, clk_freq, start_freq, step, shift)
+        sine_wave, freqs = create_chirp_signal(sine_size, clk_freq, start_freq, step, shift)
 
         network.input_full_data(sine_wave)
 
@@ -121,7 +121,7 @@ def test_frequency(network, test_size=10_000_000, start_freq=0, step=1 / 200000,
 
 
 @njit
-def create_sine_wave(test_size, clk_freq, start_freq, step, shift):
+def create_chirp_signal(test_size, clk_freq, start_freq, step, shift):
     sine_wave = (np.arange(test_size) * step + start_freq + step)
     sine_wave = sine_wave * 2 * np.pi / clk_freq
     sine_wave = np.cumsum(sine_wave) + shift  # phase

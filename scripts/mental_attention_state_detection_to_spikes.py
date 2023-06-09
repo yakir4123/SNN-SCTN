@@ -166,7 +166,7 @@ clk_resonators = {
     76800: ['4.000', '4.500', '5.000', '5.900', '6.950'],
     153600: ['8.000', '9.000', '10.000', '11.800', '13.900'],
     307200: ['16.000', '18.000', '20.000', '23.600', '27.800'],
-    614400: ['32.000', '36.000', '40.000', '47.200', '55.600'],
+    # 614400: ['32.000', '36.000', '40.000', '47.200', '55.600'],
 }
 
 fs = 128
@@ -182,9 +182,8 @@ channels = [
 ]
 
 trails = [
-        # 3,4,5,6,7,
-        # 10,
-    11,12,13,14,
+        3,4,5,6,7,
+        10, 11,12,13,14,
         17,18,19,20,21,
         24,25,26,27,28,
         31,32,33,34
@@ -251,8 +250,8 @@ with tqdm(total=n_channels * len(trails) * n_resonators * total_minutes) as pbar
                             if not is_file_exist(output_folder):
                                 data_resampled = resample_signal(clk_freq, fs, ch_data[fs * m * 60: fs * (m+1) * 60])
                                 resonator.input_full_data(data_resampled)
-                            save_output(resonator, output_folder)
-                            output_neuron.forget_logs()
+                                save_output(resonator, output_folder)
+                                output_neuron.forget_logs()
                             pbar.update()
 
 # create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')

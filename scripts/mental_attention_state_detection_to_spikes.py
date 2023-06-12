@@ -158,15 +158,15 @@ def is_file_exist(path: str):
     if not path.is_file():
         return False
     # to check if its valid file
-    return len(np.load(path)['spikes'])
+    return len(np.load(path)['spikes']) > 0
 
 
 clk_resonators = {
-    38400: ['2.000', '2.250', '2.500', '2.950', '3.475'],
-    76800: ['4.000', '4.500', '5.000', '5.900', '6.950'],
-    153600: ['8.000', '9.000', '10.000', '11.800', '13.900'],
-    307200: ['16.000', '18.000', '20.000', '23.600', '27.800'],
-    # 614400: ['32.000', '36.000', '40.000', '47.200', '55.600'],
+    # 38400: ['2.000', '2.250', '2.500', '2.950', '3.475'],
+    # 76800: ['4.000', '4.500', '5.000', '5.900', '6.950'],
+    # 153600: ['8.000', '9.000', '10.000', '11.800', '13.900'],
+    # 307200: ['16.000', '18.000', '20.000', '23.600', '27.800'],
+    614400: ['32.000', '36.000', '40.000', '47.200', '55.600'],
 }
 
 fs = 128
@@ -182,11 +182,12 @@ channels = [
 ]
 
 trails = [
-        3,4,5,6,7,
-        10, 11,12,13,14,
-        17,18,19,20,21,
-        24,25,26,27,28,
-        31,32,33,34
+        # 3,4,5,6,7,
+        # 6,
+        # 10,11,12,13,14,
+        # 17,18,19,20,21,
+        # 24,25,26,27,28,
+        28,31,32,33,34
     ]
 
 print('Find constant normalization value!')
@@ -200,9 +201,10 @@ for trial in trails:
 
 channels = [
     # 'FC6',
-    # 'F4',
+    'F4',
+    # 'O2',
     # 'F8',
-    # 'AF4'
+    # 'AF4',
     # 'AF3',
     # 'F7',
     # 'F3',
@@ -210,9 +212,8 @@ channels = [
     # 'T7',
     # 'P7',
     # 'O1',
-    # 'O2',
     # 'P8',
-    'T8',
+    # 'T8',
 ]
 
 n_channels = len(channels)
@@ -252,6 +253,7 @@ with tqdm(total=n_channels * len(trails) * n_resonators * total_minutes) as pbar
                                 resonator.input_full_data(data_resampled)
                                 save_output(resonator, output_folder)
                                 output_neuron.forget_logs()
+                            pbar.set_description(f"T{trial}, Ch {ch} - {f0}, M{m}")
                             pbar.update()
 
 # create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')

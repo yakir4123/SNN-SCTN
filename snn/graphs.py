@@ -173,5 +173,3 @@ def plot_network(network):
 
     pos_nodes = nudge(pos, 0, 0)
     nx.draw_networkx_labels(G, font_color="black", pos=pos_nodes, labels=nodes_labels)
-
-    plt.show()

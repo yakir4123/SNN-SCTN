@@ -1,0 +1,16 @@
+{
+    "amplitude_gain": 10.0,
+    "lf_lp_option": 0,
+    "th_gain0": 1,
+    "th_gain1": 1,
+    "th_gain2": 1,
+    "th_gain3": 1,
+    "weight_gain0": 1.1,
+    "weight_gain1": 0.9,
+    "weight_gain2": 1.0,
+    "weight_gain3": 1.0,
+    "weight_gain4": 1.0,
+    "LF": 5.0,
+    "LP": 74.0,
+    "f_resonator": 104.0
+}

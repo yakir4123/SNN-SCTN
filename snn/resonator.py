@@ -133,7 +133,6 @@ def freq_of_resonator(f_pulse, LF, LP):
     return f_pulse / ((2 ** LF) * 2 * np.pi * (1 + LP))
 
 
-@njit
 def lf_lp_options(freq0, f_pulse):
     x = np.arange(0, 10)
     y = np.arange(400)

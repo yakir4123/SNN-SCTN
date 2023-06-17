@@ -99,7 +99,7 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
 
 def manual_parameters_plot():
     if LF == -1 or LP == -1:
-        print(lf_lp_options(freq0=freq0, f_pulse=clk_pulse))
+        print(lf_lp_options(freq0=freq0, clk_freq=clk_pulse))
     gain_factor = 9344 / ((2 ** (2 * LF - 3)) * (1 + LP))
     gains = {'th_gain0': gain_factor, 'th_gain1': gain_factor, 'th_gain2': gain_factor, 'th_gain3': gain_factor,
              'weight_gain0': gain_factor * 1.1, 'weight_gain1': gain_factor * 0.9,

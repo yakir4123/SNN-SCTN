@@ -129,23 +129,32 @@ def create_chirp_signal(test_size, clk_freq, start_freq, step, shift):
 
 
 @njit
-def freq_of_resonator(f_pulse, LF, LP):
-    return f_pulse / ((2 ** LF) * 2 * np.pi * (1 + LP))
+def freq_of_resonator(clk_freq, LF, LP):
+    return clk_freq / ((2 ** LF) * 2 * np.pi * (1 + LP))
 
 
-def lf_lp_options(freq0, f_pulse):
-    x = np.arange(0, 10)
-    y = np.arange(400)
+def all_lf_lp_options(lf_size, lp_size, clk_freq):
+    x = np.arange(lf_size)
+    y = np.arange(lp_size)
     freqs_options = np.zeros((len(x), len(y)))
     for i in range(3, len(x)):
-        freqs_options[i, :] = freq_of_resonator(f_pulse, i, y)
+        freqs_options[i, :] = freq_of_resonator(clk_freq, i, y)
     freqs_options[:, 0] = 0
+    return freqs_options
+
+
+def lp_by_lf(lf, freq0, clk_freq):
+    return int((clk_freq / ((2 ** lf) * 2 * np.pi * freq0)) - 1)
+
+
+def lf_lp_options(freq0, clk_freq):
+    freqs_options = all_lf_lp_options(10, 400, clk_freq)
     # find the parameter that will give the closest frequency as the desired frequency
     indices = np.argmin(np.abs(freqs_options - freq0), axis=1)
-    all_lf_lp_options = np.array(list(zip(x, indices)))
-    best_lp_option = np.array([freqs_options[int(opt[0]), int(opt[1])] for opt in all_lf_lp_options])
+    usable_lf_lp_options = np.array(list(zip(np.arange(10), indices)))
+    best_lp_option = np.array([freqs_options[int(opt[0]), int(opt[1])] for opt in usable_lf_lp_options])
     res = np.zeros((len(best_lp_option), 3))
-    res[:, :2] = all_lf_lp_options
+    res[:, :2] = usable_lf_lp_options
     res[:, 2] = best_lp_option
     return res
 

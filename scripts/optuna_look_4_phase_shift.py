@@ -11,20 +11,15 @@ from snn.spiking_network import SpikingNetwork
 from snn.spiking_neuron import create_SCTN, IDENTITY
 from snn.resonator import test_resonator_on_chirp, lp_by_lf, freq_of_resonator
 
-freq0 = 1412
-freq_gt = 104
+freq0 = 104
+freq_base = 104
 clk_freq = 1536000
-duration = 1 * freq_gt / freq0
+duration = .6 * freq_base / freq0
 spikes_window_size = 500
 trials = 300
-print(freq0)
+# lf_options = [5, 4, 6, 7, 3, 8]
+lf_options = [5]
 
-
-def oversample(signal, num_samples):
-    original_length = signal.shape[0]
-    indices = np.linspace(0, original_length - 1, num_samples)
-    interpolated_signal = np.interp(indices, np.arange(original_length), signal)
-    return interpolated_signal
 
 def neuron_output(neuron, rolling_window, duration, signal_freq, shift_degrees=0):
     y_events = neuron.out_spikes()
@@ -85,27 +80,17 @@ def resonator_from_optuna(freq0, lf, theta_input, theta, weight_input, weight_fe
     network.connect_by_id(4, 1)
     return network
 
-def shift(signal, shift_by, waves):
-    delta = np.zeros(len(signal))
-    wave_length = len(signal)/waves
-    shift_by *= wave_length/(2*np.pi)
-    delta[int(shift_by)] = 1.0
-    fft_delta = np.fft.fft(delta)
-    fft_signal = np.fft.fft(signal)*fft_delta
-    shifted_signal = np.fft.ifft(fft_signal)
-    return shifted_signal.real
-
 def objective(trial):
-    gain = max(1., freq0 / 52)
-    theta_input=trial.suggest_int('theta_input', -int(gain*15), -int(gain*1))
-    theta=trial.suggest_int('theta', -int(gain*15), -int(gain*1))
-    weight_input=trial.suggest_int('weight_input', int(gain*3), int(gain*15))
-    weight_feedback=trial.suggest_int('weight_feedback', int(gain*3), int(gain*15))
-    weight=trial.suggest_int('weight', int(gain*3), int(gain*15))
+    gain = max(1., freq0 / 104)
+    theta_input = trial.suggest_int('theta_input', -int(gain*10), -int(gain*1))
+    theta = trial.suggest_int('theta', -int(gain*10), -int(gain*1))
+    weight_input = trial.suggest_int('weight_input', int(gain*5), int(gain*15))
+    weight_feedback = trial.suggest_int('weight_feedback', int(gain*5), int(gain*15))
+    weight = trial.suggest_int('weight', int(gain*5), int(gain*15))
     amplitude_gain=1
 
     resonator = resonator_from_optuna(freq0, lf, theta_input, theta, weight_input, weight_feedback, weight, amplitude_gain, clk_freq)
-    return  score_resonator(resonator, duration=.3, freq0=freq0)
+    return  score_resonator(resonator, duration=duration, freq0=freq0)
 
 def score_resonator(resonator, duration, freq0):
     for i in range(0, 5):
@@ -142,16 +127,16 @@ Path(f"../filters2/clk_{clk_freq}/parameters").mkdir(parents=True, exist_ok=True
 best_params = {}
 best_lf = 0
 best_lf_score = np.inf
-for lf in range(3, 8):
+for lf in lf_options:
 # for lf in range(5, 6):
-    resonator = resonator_from_optuna(freq_gt, **base_params, lf=5, clk_freq=clk_freq)
+    resonator = resonator_from_optuna(freq_base, **base_params, lf=5, clk_freq=clk_freq)
     desired_resonator = resonator_from_optuna(freq0, **base_params, lf=lf, clk_freq=clk_freq)
     desired_resonator.log_out_spikes(0)
     for i in range(0, 5):
         resonator.log_out_spikes(i)
-    generate_and_input_signal(resonator, duration, freq_gt)
+    generate_and_input_signal(resonator, duration, freq_base)
     generate_and_input_signal(desired_resonator, duration, freq0)
-    ground_truth_104 = np.array([neuron_output(resonator.neurons[i], spikes_window_size, duration, freq_gt) for i in range(0, 5)])
+    ground_truth_104 = np.array([neuron_output(resonator.neurons[i], spikes_window_size, duration, freq_base) for i in range(0, 5)])
 
     phase_shift = 0
     ground_truth = []
@@ -161,16 +146,20 @@ for lf in range(3, 8):
         max_xi = ground_truth_104[i].max()
         min_xi = ground_truth_104[i].min()
         norm_x1 = (ground_truth_104[i] - min_xi) / (max_xi - min_xi) * 2 - 1
-        phase_shift -= np.mean(np.abs((np.arcsin(norm_x0) - np.arcsin(norm_x1)))*180/np.pi)
+        align_norms = np.array([norm_x1[::20], norm_x0[::20]])
+        cov = np.cov(np.transpose(align_norms))
+        phi = np.arccos(cov[1, 0]) * 180 / np.pi / 2
+        phase_shift -= phi
         gt_i = neuron_output(desired_resonator.neurons[0], spikes_window_size, duration, freq0, phase_shift)
         gt_i = (gt_i - gt_i.min())/(gt_i.max() - gt_i.min())
         gt_i = gt_i * (max_xi - min_xi) + min_xi
         ground_truth.append(gt_i)
 
     ground_truth = np.array(ground_truth)
-    if freq0 == freq_gt:
+    if freq0 == freq_base:
         # for testing the mse of the ground truth vs what we are searching
-        mse = score_resonator(resonator, duration=.3, freq0=freq0)
+        # mse = score_resonator(resonator, duration=duration, freq0=freq0)
+        mse = score_resonator(resonator, duration=duration, freq0=freq0)
         print(f'mse {mse}')
 
 

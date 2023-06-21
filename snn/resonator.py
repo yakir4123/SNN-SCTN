@@ -11,6 +11,50 @@ from snn.spiking_neuron import IDENTITY, create_SCTN, BINARY
 def create_base_resonator_by_parameters(
         freq0,
         clk_freq,
+        lf,
+        theta_input,
+        theta,
+        weight_input,
+        weight_feedback,
+        weight,
+):
+    LF = lf
+    LP = lp_by_lf(LF, freq0, clk_freq)
+    network = SpikingNetwork(clk_freq)
+    network.add_amplitude(1000)
+
+    # Encode to pdm
+    neuron = create_SCTN()
+    neuron.activation_function = IDENTITY
+    network.add_layer(SCTNLayer([neuron]))
+
+    # SCTN 1
+    neuron = create_SCTN()
+    neuron.synapses_weights = np.array([weight_input, -weight_feedback], dtype=np.float64)
+    neuron.leakage_factor = LF
+    neuron.leakage_period = LP
+    neuron.theta = theta_input
+    neuron.activation_function = IDENTITY
+    neuron.membrane_should_reset = False
+    network.add_layer(SCTNLayer([neuron]))
+
+    for i in range(3):
+        neuron = create_SCTN()
+        neuron.synapses_weights = np.array([weight], dtype=np.float64)
+        neuron.leakage_factor = LF
+        neuron.leakage_period = LP
+        neuron.theta = theta
+        neuron.activation_function = IDENTITY
+        neuron.membrane_should_reset = False
+        network.add_layer(SCTNLayer([neuron]))
+
+    # feedback
+    network.connect_by_id(4, 1)
+    return network
+
+def _create_base_resonator_by_parameters(
+        freq0,
+        clk_freq,
         LF,
         LP,
         theta_gain,
@@ -54,11 +98,23 @@ def create_base_resonator_by_parameters(
 
 
 def create_base_resonator(freq0, clk_freq):
+    f_parameters_resonator = int(freq0 * 1536000 / clk_freq)
+    with open(f'../filters2/clk_1536000/parameters/f_{f_parameters_resonator}.json') as f:
+        parameters = json.load(f)
+    return create_base_resonator_by_parameters(freq0, clk_freq,
+                                               lf=parameters['lf'],
+                                               theta_input=parameters['theta_input'],
+                                               theta=parameters['theta'],
+                                               weight_input=parameters['weight_input'],
+                                               weight_feedback=parameters['weight_feedback'],
+                                               weight=parameters['weight']
+                                               )
+def _create_base_resonator(freq0, clk_freq):
     with open(f'../filters/clk_{clk_freq}/parameters/f_{freq0}.json') as f:
         parameters = json.load(f)
     th_gains = [parameters[f'th_gain{i}'] for i in range(4)]
     weighted_gains = [parameters[f'weight_gain{i}'] for i in range(5)]
-    return create_base_resonator_by_parameters(freq0, clk_freq,
+    return _create_base_resonator_by_parameters(freq0, clk_freq,
                                                parameters['LF'], parameters['LP'],
                                                th_gains, weighted_gains,
                                                parameters['amplitude_gain'])
@@ -106,14 +162,14 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
 
 
 @njit
-def test_resonator_on_chirp(network, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000):
+def test_resonator_on_chirp(network, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000, amplifier=1):
     batch_size = 50_000
     shift = 0
     while test_size > 0:
         sine_size = min(batch_size, test_size)
         sine_wave, freqs = create_chirp_signal(sine_size, clk_freq, start_freq, step, shift)
 
-        network.input_full_data(sine_wave)
+        network.input_full_data(amplifier*sine_wave)
 
         shift = freqs[-1]
         start_freq += sine_size * step

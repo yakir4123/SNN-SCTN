@@ -218,8 +218,15 @@ class SCTNeuron:
     def membrane_potential_graph(self):
         return self._membrane_potential_graph[:self.index // len(self.membrane_sample_max_window)]
 
-    def out_spikes(self):
-        return self._out_spikes[:self._out_spikes_index]
+    def out_spikes(self, is_timestamps=True, spikes_array_size=-1):
+        ts = self._out_spikes[:self._out_spikes_index]
+        if is_timestamps:
+            return ts
+        if spikes_array_size == -1:
+            spikes_array_size = ts[-1]
+        res = np.zeros(spikes_array_size).astype('int64')
+        res[ts] = 1
+        return res
 
     def forget_logs(self):
         self._out_spikes_index = 0

@@ -148,15 +148,22 @@ def plot_network(network):
     colors = nx.get_edge_attributes(G, 'color').values()
     nodes_size = [nodes_size[n] for n in G.nodes]
     nodes_color = [nodes_color[n] for n in G.nodes]
-    next_layer_edges = [(e1, e2) for (e1, e2) in G.edges if e1 < e2]
-    feedback_edges = [(e1, e2) for (e1, e2) in G.edges if e1 > e2]
+    connections_arc = {}
+    for (e1, e2) in G.edges:
+        key = ((-np.sign(e1 - e2) * (1 / np.arange(1, np.abs(e1 - e2) + 1)).sum()) - 1)/10
+        if key not in connections_arc:
+            connections_arc[key] = []
+        connections_arc[key].append((e1, e2))
+
     nx.draw_networkx_nodes(G,
                            pos=pos,
                            node_color=nodes_color,
                            node_size=nodes_size,
                            )
-    nx.draw_networkx_edges(G, pos, edgelist=next_layer_edges, width=2, alpha=0.5)
-    nx.draw_networkx_edges(G, pos, connectionstyle='arc3, rad = 0.2', edgelist=feedback_edges, width=2, alpha=0.5)
+    # nx.draw_networkx_edges(G, pos, edgelist=next_layer_edges, width=2, alpha=0.5)
+    # nx.draw_networkx_edges(G, pos, connectionstyle=f'arc3, rad = 0.2', edgelist=feedback_edges, width=2, alpha=0.5)
+    for arc, edges in connections_arc.items():
+        nx.draw_networkx_edges(G, pos, connectionstyle=f'arc3, rad = {arc}', edgelist=edges, width=2, alpha=0.5)
 
     # nx.draw(G,
     #         with_labels=False,

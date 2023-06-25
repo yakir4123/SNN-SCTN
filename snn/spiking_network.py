@@ -128,7 +128,7 @@ class SpikingNetwork:
             classes += res
         return classes
 
-    def input_full_data_spikes(self, spike_train, stop_on_first_spike=True):
+    def input_full_data_spikes(self, spike_train, stop_on_first_spike=False):
         classes = np.zeros(len(self.layers_neurons[-1].neurons))
         for i, spikes in enumerate(spike_train):
             res = self.input(spikes)
@@ -151,6 +151,10 @@ class SpikingNetwork:
             neuron.membrane_potential = p
 
         return self.input(np.zeros(len(potential)))
+
+    def forget_logs(self):
+        for neuron in self.neurons:
+            neuron.forget_logs()
 
     def _calculate_clk(self):
         if self.clk_freq_qrt % 2 == 1:

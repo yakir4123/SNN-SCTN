@@ -27,6 +27,7 @@ spec = OrderedDict([
     ('stdp', optional(STDP.class_type.instance_type)),
 
     ('index', int32),
+    ('injected_output_spikes', int64[:]),
     ('_out_spikes', int64[:]),
     ('_out_spikes_index', int32),
     ('log_out_spikes', boolean),
@@ -41,6 +42,7 @@ spec = OrderedDict([
 IDENTITY = 0
 BINARY = 1
 SIGMOID = 2
+INJECT = 3
 
 
 @jitclass(spec)
@@ -64,6 +66,7 @@ class SCTNeuron:
         self.synapses_weights = np.copy(synapses_weights)
         self.stdp = None
         self.label = None
+        self.injected_output_spikes = np.zeros(0).astype('int64')
 
         self.rand_gauss_var = 0
         self.gaussian_rand_order = 8
@@ -140,6 +143,8 @@ class SCTNeuron:
             emit_spike = self._activation_function_binary()
         elif self.activation_function == SIGMOID:
             emit_spike = self._activation_function_sigmoid()
+        elif self.activation_function == INJECT:
+            emit_spike = self._activation_injection_spikes()
         else:
             raise ValueError("Only 3 activation functions are supported [IDENTITY, BINARY, SIGMOID]")
 
@@ -212,6 +217,10 @@ class SCTNeuron:
             return 1
         return 0
 
+    def _activation_injection_spikes(self):
+        if self.index in self.injected_output_spikes:
+            return 1
+        return 0
     def __hash__(self):
         return self._id
 

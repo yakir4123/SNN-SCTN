@@ -1,6 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
+
+from snn.learning_rules.supervised_stdp import SupervisedSTDP
 from utils import jitclass, njit
 from snn.learning_rules.stdp import STDP
 from numba import int32, float32, int8, float64, int16, boolean, optional, types, int64
@@ -25,6 +27,7 @@ spec = OrderedDict([
     ('synapses_weights', float64[:]),
     ('membrane_should_reset', boolean),
     ('stdp', optional(STDP.class_type.instance_type)),
+    ('supervised_stdp', optional(SupervisedSTDP.class_type.instance_type)),
 
     ('index', int32),
     ('injected_output_spikes', int64[:]),
@@ -65,6 +68,7 @@ class SCTNeuron:
         self.threshold_pulse = threshold_pulse
         self.synapses_weights = np.copy(synapses_weights)
         self.stdp = None
+        self.supervised_stdp = None
         self.label = None
         self.injected_output_spikes = np.zeros(0).astype('int64')
 
@@ -93,6 +97,8 @@ class SCTNeuron:
 
         if self.stdp is not None:
             self.synapses_weights = self.stdp.tick(pre_spikes, emit_spike)
+        if self.supervised_stdp is not None:
+            self.synapses_weights = self.supervised_stdp.tick(pre_spikes, emit_spike, self.index)
 
         if self.log_membrane_potential:
             sample_window_size = len(self.membrane_sample_max_window)
@@ -170,6 +176,16 @@ class SCTNeuron:
                          wmin,
                          )
 
+    def set_supervised_stdp(self, A, tau, clk_freq, wmax, wmin, desired_output):
+        self.supervised_stdp = SupervisedSTDP(self.synapses_weights,
+                                              A,
+                                              tau,
+                                              clk_freq,
+                                              wmax,
+                                              wmin,
+                                              desired_output
+                                              )
+
     def set_stdp_ltp(self, A_LTP):
         if self.stdp is not None:
             self.stdp.A_LTP = A_LTP
@@ -180,6 +196,8 @@ class SCTNeuron:
 
     def reset_learning(self):
         if self.stdp is not None:
+            self.stdp.reset_learning()
+        if self.supervised_stdp is not None:
             self.stdp.reset_learning()
 
     def _activation_function_identity(self):

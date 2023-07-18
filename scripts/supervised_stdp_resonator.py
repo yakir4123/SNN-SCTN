@@ -243,12 +243,13 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                 min_mse_weights = flat_weights(resonator)
 
             thetas_shift = [-.2*(((2*np.mean(o) - spikes_window)/spikes_window)**2)*np.sign(np.mean(o)-spikes_window/2) for o in output]
-            if not all_neurons_on_dc:
+            # if not all_neurons_on_dc:
+            if True:
                 all_neurons_on_dc = True
                 for j, neuron in enumerate(resonator.neurons[1:]):
                     dc = output[j].mean()
-                    if abs(dc - spikes_window / 2) < y_epsilon:
-                        continue
+                    # if abs(dc - spikes_window / 2) < y_epsilon:
+                    #     continue
                     all_neurons_on_dc = False
                     bs = thetas_shift[j]
                     momentum[j] = bs + momentum_beta * momentum[j]
@@ -256,7 +257,8 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                     if neuron.theta > max_theta:
                         neuron.theta = max_theta
 
-            if all_neurons_on_dc:
+            # if all_neurons_on_dc:
+            if True:
                 peaks = [argmax(o)for o in output]
                 # activate weights learning
                 for j, o in enumerate(output):
@@ -298,8 +300,8 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
             resonator.forget_logs()
             pbar.update(1)
 
-    chosen_thetas = min_mse_thetas
-    chosen_weights = min_mse_weights
+    chosen_thetas = flat_thetas(resonator)
+    chosen_weights = flat_weights(resonator)
 
     # plot the output of the neurons.
     res_resonator = simple_resonator(
@@ -344,7 +346,7 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
     spectrum = 2 * freq0
     res_resonator.forget_logs()
 
-    step = step_ratio / clk_freq
+    step = 100 / clk_freq
     test_size = int(spectrum / step)
     test_resonator_on_chirp(
         res_resonator,
@@ -410,12 +412,12 @@ Path(f"../filters{lf}{postfix}/clk_{clk_freq}/parameters").mkdir(parents=True, e
 
 momentum_beta = .01
 
-freqs = [freq_of_resonator(clk_freq, lf, lp) for lp in range(72, 10, -4)]
+freqs = [freq_of_resonator(clk_freq, lf, lp) for lp in range(112, 20, -4)]
 
 # init_thetas = [-1, -5, -5, -5]
 # init_weights = [11, 9, 10, 10, 10]
-init_thetas = [-2, -20, -20, -20]
-init_weights = [23, 20, 22, 22, 22]
+init_thetas = [-1.587, -11.313, -11.535, -11.413]
+init_weights = [35.849, 32.51,  22.673, 23.132, 22.903]
 
 for freq in freqs:
     print(freq)

@@ -1,9 +1,13 @@
+import os
 import json
+import numpy as np
+import pandas as pd
 from pathlib import Path
 
-import numpy as np
 from tqdm import tqdm
 from matplotlib import pyplot as plt
+from numpy.polynomial.polynomial import Polynomial
+
 
 from snn.layers import SCTNLayer
 from snn.resonator import lp_by_lf
@@ -145,6 +149,45 @@ def flat_thetas(resonator):
 def argmax(arr):
     return .5 * (np.argmax(arr) + len(arr) - np.argmax(arr[::-1]) - 1)
 
+
+def estimated_parameters_for_resonator(freq0, lf, clk_freq, polynom_deg=4):
+    filters_dir = f'../filters{lf}/clk_{clk_freq}/parameters/'
+
+    resonators_parameters = []
+    for f in os.listdir(filters_dir):
+        with open(f'{filters_dir}/{f}') as f:
+            hp = {}
+            full_parameters = json.load(f)
+            f_resonator = float(full_parameters['f_resonator'])
+            # if full_parameters['lf'] != 5 or int(full_parameters['freq0']//1) not in chosen_freqs:
+            #     continue
+            hp['f_resonator'] = f_resonator  # float(full_parameters['peaks'][2])
+            for i in range(4):
+                hp[f'th{i}'] = full_parameters['thetas'][i]
+            for i in range(5):
+                hp[f'w{i}'] = full_parameters['weights'][i]
+            resonators_parameters.append(hp)
+
+    df = pd.DataFrame(resonators_parameters)
+    df = df.set_index('f_resonator').sort_index()
+
+    for col in df.columns:
+        fit = Polynomial.fit(df.index, df[col], deg=polynom_deg)
+        df[f'{col}-fit'] = fit(df.index)
+    poly_th0 = Polynomial.fit(df.index, df['th0'], deg=polynom_deg)
+    poly_th1 = Polynomial.fit(df.index, df['th1'], deg=polynom_deg)
+    poly_th2 = Polynomial.fit(df.index, df['th2'], deg=polynom_deg)
+    poly_th3 = Polynomial.fit(df.index, df['th3'], deg=polynom_deg)
+
+    poly_w0 = Polynomial.fit(df.index, df['w0'], deg=polynom_deg)
+    poly_w1 = Polynomial.fit(df.index, df['w1'], deg=polynom_deg)
+    poly_w2 = Polynomial.fit(df.index, df['w2'], deg=polynom_deg)
+    poly_w3 = Polynomial.fit(df.index, df['w3'], deg=polynom_deg)
+    poly_w4 = Polynomial.fit(df.index, df['w4'], deg=polynom_deg)
+
+    thetas = [poly_th0(freq0), poly_th1(freq0), poly_th2(freq0), poly_th3(freq0)]
+    weights = [poly_w0(freq0), poly_w1(freq0), poly_w2(freq0), poly_w3(freq0), poly_w4(freq0)]
+    return thetas, weights
 
 
 def search_for_parameters(freq0, lf, thetas, weights, phase):
@@ -420,5 +463,9 @@ init_thetas = [-1.587, -11.313, -11.535, -11.413]
 init_weights = [35.849, 32.51,  22.673, 23.132, 22.903]
 
 for freq in freqs:
+    best_lp = lp_by_lf(lf, freq, clk_freq)
+    freq0 = freq_of_resonator(clk_freq, lf, best_lp)
     print(freq)
-    init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights, phase=20)
+    init_thetas, init_weights = estimated_parameters_for_resonator(freq, lf, clk_freq)
+    search_for_parameters(freq, lf, init_thetas, init_weights, phase=20)
+    # init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights, phase=20)

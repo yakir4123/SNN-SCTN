@@ -98,7 +98,7 @@ class SCTNeuron:
         if self.stdp is not None:
             self.synapses_weights = self.stdp.tick(pre_spikes, emit_spike)
         if self.supervised_stdp is not None:
-            self.synapses_weights = self.supervised_stdp.tick(pre_spikes, emit_spike, self.index)
+            self.synapses_weights = self.supervised_stdp.tick(self.synapses_weights, pre_spikes, emit_spike, self.index)
 
         if self.log_membrane_potential:
             sample_window_size = len(self.membrane_sample_max_window)

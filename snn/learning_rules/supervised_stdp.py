@@ -49,7 +49,6 @@ class SupervisedSTDP:
         self.wmin = wmin
         self.desired_output = desired_output
 
-        self.synapses_weights = synapses_weights
         self.is_active = False
         # P for every pre-synaptic
         self.P = np.zeros(synapses_weights.shape, dtype=np.float64)
@@ -57,26 +56,26 @@ class SupervisedSTDP:
     def reset_learning(self):
         self.P = np.zeros(self.P.shape, dtype=np.float64)
 
-    def tick(self, pre_spikes, post_spike, index):
+    def tick(self, synapses_weights, pre_spikes, post_spike, index):
         self.P = np.minimum(self.decay * self.P + self.A * pre_spikes, 1)
         if not self.is_active:
             if index == self.desired_output[0]:
                 self.is_active = True
             else:
-                return self.synapses_weights
+                return synapses_weights
 
         # unwanted spike
         if post_spike == 1 and index not in self.desired_output:
-            self.synapses_weights -= self.P
+            synapses_weights -= self.P
 
         # no spike were emitted
         if post_spike == 0 and index in self.desired_output:
-            self.synapses_weights += self.P
+            synapses_weights += self.P
 
-        self.synapses_weights = np.clip(self.synapses_weights, self.wmin, self.wmax)
+        synapses_weights = np.clip(synapses_weights, self.wmin, self.wmax)
         if index == self.desired_output[-1]:
             self.is_active = False
-        return self.synapses_weights
+        return synapses_weights
 
 
 

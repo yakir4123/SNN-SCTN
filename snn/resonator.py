@@ -1,4 +1,5 @@
 import json
+import os
 
 import numpy as np
 
@@ -142,7 +143,6 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
     inh_resonator = create_excitatory_resonator(freq0, clk_freq)
 
     inh_resonator.neurons[0].use_clk_input = True
-    # exc_resonator.add_network(inh_resonator)
 
     network.add_network(exc_resonator)
     network.add_network(inh_resonator)
@@ -160,6 +160,66 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
 
     return network
 
+
+def trained_resonator(freq0, lf=4):
+    clk_freq = 1536
+    f = freq0
+    while f > 1:
+        f /= 10
+        clk_freq *= 10
+    configured_freq = freq0 * 1_536_000 / clk_freq
+    root_folder = f'../filters{lf}/clk_1536000/parameters/'
+    available_resonators = np.array([int(f[2:-5]) for f in os.listdir(root_folder)])
+    arg_chosen_resonator = np.argmin(np.abs(available_resonators - configured_freq))
+    chosen_resonator = available_resonators[arg_chosen_resonator]
+    with open(f'{root_folder}/f_{chosen_resonator}.json') as f:
+        parameters = json.load(f)
+        thetas = parameters['thetas']
+        weights = parameters['weights']
+
+    return simple_resonator(freq0, clk_freq, lf, thetas, weights)
+
+
+def simple_resonator(
+        freq0,
+        clk_freq,
+        lf,
+        thetas,
+        weights,
+):
+    LF = lf
+    LP = lp_by_lf(LF, freq0, clk_freq)
+    network = SpikingNetwork(clk_freq)
+    network.add_amplitude(1000)
+
+    # Encode to pdm
+    neuron = create_SCTN()
+    neuron.activation_function = IDENTITY
+    network.add_layer(SCTNLayer([neuron]))
+
+    # SCTN 1
+    neuron = create_SCTN()
+    neuron.synapses_weights = np.array([weights[0], -weights[1]], dtype=np.float64)
+    neuron.leakage_factor = LF
+    neuron.leakage_period = LP
+    neuron.theta = thetas[0]
+    neuron.activation_function = IDENTITY
+    neuron.membrane_should_reset = False
+    network.add_layer(SCTNLayer([neuron]))
+
+    for i in range(3):
+        neuron = create_SCTN()
+        neuron.synapses_weights = np.array([weights[2+i]], dtype=np.float64)
+        neuron.leakage_factor = LF
+        neuron.leakage_period = LP
+        neuron.theta = thetas[1+i]
+        neuron.activation_function = IDENTITY
+        neuron.membrane_should_reset = False
+        network.add_layer(SCTNLayer([neuron]))
+
+    # feedback
+    network.connect_by_id(4, 1)
+    return network
 
 @njit
 def test_resonator_on_chirp(network, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000, amplifier=1):

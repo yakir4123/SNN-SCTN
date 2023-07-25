@@ -149,7 +149,13 @@ def flat_thetas(resonator):
 def argmax(arr):
     return .5 * (np.argmax(arr) + len(arr) - np.argmax(arr[::-1]) - 1)
 
-
+def read_or_default(freq0, default_thetas, default_weights, lf=4, clk_freq=1536000):
+    try:
+        with open(f'../filters{lf}/clk_{clk_freq}/parameters/f_{int(freq0)}.json') as f:
+            full_parameters = json.load(f)
+            return full_parameters['thetas'], full_parameters['weights']
+    except FileNotFoundError:
+        return default_thetas, default_weights
 def estimated_parameters_for_resonator(freq0, lf, clk_freq, polynom_deg=4):
     filters_dir = f'../filters{lf}/clk_{clk_freq}/parameters/'
 
@@ -306,7 +312,7 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                 min_mse_thetas_tuned = flat_thetas(resonator)
                 min_mse_weights_tuned = flat_weights(resonator)
 
-            thetas_shift = [-.2*(((2*np.mean(o) - spikes_window)/spikes_window)**2)*np.sign(np.mean(o)-spikes_window/2) for o in output]
+            thetas_shift = [-.1*(((2*np.mean(o) - spikes_window)/spikes_window)**2)*np.sign(np.mean(o)-spikes_window/2) for o in output]
             for j, neuron in enumerate(resonator.neurons[1:]):
                 bs = thetas_shift[j]
                 momentum[j] = bs + momentum_beta * momentum[j]
@@ -320,18 +326,23 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                 o_max = o.max()
                 o_min = o.min()
                 neuron = resonator.neurons[1 + j]
+                o_argmax = argmax(o)
 
                 if (abs(o_argmax - gt_peaks[j]) <= 5 * x_epsilon and
                     abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon/2 and
                     abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon/2):
-                    stretch_or_shrink_scale = .002
+                    stretch_or_shrink_scale = .001
                     if gt_wave_amplitudes[j][1] < o_min < o_max < gt_wave_amplitudes[j][0]:
                         neuron.theta -= stretch_or_shrink_scale
-                        neuron.synapses_weights += 2 * stretch_or_shrink_scale / len(neuron.synapses_weights)
+                        neuron.synapses_weights[0] += 2 * stretch_or_shrink_scale #/ len(neuron.synapses_weights)
+                        if j == 0:
+                            neuron.synapses_weights[1] -= 2 * stretch_or_shrink_scale  # / len(neuron.synapses_weights)
                     elif o_min < gt_wave_amplitudes[j][1] < gt_wave_amplitudes[j][0] < o_max:
                         stretch_or_shrink_scale *= 2
                         neuron.theta += stretch_or_shrink_scale
-                        neuron.synapses_weights -= 2 * stretch_or_shrink_scale / len(neuron.synapses_weights)
+                        neuron.synapses_weights[0] -= 2 * stretch_or_shrink_scale #/ len(neuron.synapses_weights)
+                        if j == 0:
+                            neuron.synapses_weights[1] += 2 * stretch_or_shrink_scale  # / len(neuron.synapses_weights)
 
                 if not run_with_stdp:
                     neuron.supervised_stdp = None
@@ -470,19 +481,16 @@ postfix = ''
 Path(f"../filters{lf}{postfix}/clk_{clk_freq}/figures").mkdir(parents=True, exist_ok=True)
 Path(f"../filters{lf}{postfix}/clk_{clk_freq}/parameters").mkdir(parents=True, exist_ok=True)
 
-momentum_beta = .01
+momentum_beta = .0
 
-freqs = [freq_of_resonator(clk_freq, lf, lp) for lp in range(144 -4*5, 10, -5)]
+freqs = sorted(list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144-128, 13, -1)])))
 
 # init_thetas = [-1, -5, -5, -5]
 # init_weights = [11, 9, 10, 10, 10]
-init_thetas = [-1.836, -12.875, -12.02, -11.153]
-init_weights =[20.35,  16.783, 25.767, 24.031, 22.33 ]
+init_thetas=[-162.662, -118.297, -84.919, -82.561]
+init_weights=[403.779, 79.159, 236.312, 169.819, 165.532]
 
-prev_freq = freq_of_resonator(clk_freq, lf, 144-3*5)
 for freq in freqs:
     print(freq)
-    init_thetas = np.array(init_thetas) * freq / prev_freq
-    init_weights = np.array(init_weights) * freq / prev_freq
+    init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
     init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights, phase=20)
-    prev_freq = freq

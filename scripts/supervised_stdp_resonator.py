@@ -266,15 +266,15 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
     momentum = [0] * 4
     max_theta = -.75
 
-    y_epsilon = spikes_window * 0.02
-    x_epsilon = len(rresonator_input) * 15 / 360
+    y_epsilon = spikes_window * 0.0185
+    x_epsilon = len(rresonator_input) * 5 / 360
     gt_peaks = [argmax(gt) for gt in rolling_gt]
 
     count_to_finish = -1
     epochs_after_tuning = 100
     with tqdm() as pbar:
         while count_to_finish != 0:
-            run_with_stdp = True
+            learn = True
             count_to_finish -= 1
             tuned_parameters = 0
             for neuron in resonator.neurons:
@@ -304,7 +304,7 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
             if curr_mse < min_mse:
                 min_mse = curr_mse
                 min_neurons_mses = mses
-                run_with_stdp = False
+                learn = False
                 min_mse_thetas = flat_thetas(resonator)
                 min_mse_weights = flat_weights(resonator)
             if tuned_parameters == 8 and curr_mse < min_mse_tuned:
@@ -312,13 +312,14 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                 min_mse_thetas_tuned = flat_thetas(resonator)
                 min_mse_weights_tuned = flat_weights(resonator)
 
-            thetas_shift = [-.1*(((2*np.mean(o) - spikes_window)/spikes_window)**2)*np.sign(np.mean(o)-spikes_window/2) for o in output]
-            for j, neuron in enumerate(resonator.neurons[1:]):
-                bs = thetas_shift[j]
-                momentum[j] = bs + momentum_beta * momentum[j]
-                neuron.theta += momentum[j]
-                if neuron.theta > max_theta:
-                    neuron.theta = max_theta
+            if learn:
+                thetas_shift = [-.1*(((2*np.mean(o) - spikes_window)/spikes_window)**2)*np.sign(np.mean(o)-spikes_window/2) for o in output]
+                for j, neuron in enumerate(resonator.neurons[1:]):
+                    bs = thetas_shift[j]
+                    momentum[j] = bs + momentum_beta * momentum[j]
+                    neuron.theta += momentum[j]
+                    if neuron.theta > max_theta:
+                        neuron.theta = max_theta
 
             # activate weights learning
             peaks = [argmax(o)for o in output]
@@ -328,10 +329,12 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                 neuron = resonator.neurons[1 + j]
                 o_argmax = argmax(o)
 
-                if (abs(o_argmax - gt_peaks[j]) <= 5 * x_epsilon and
-                    abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon/2 and
-                    abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon/2):
-                    stretch_or_shrink_scale = .001
+                if (learn and
+                        abs(o_argmax - gt_peaks[j]) <= 5 * x_epsilon and
+                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon/4 and
+                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon/4):
+                    # 100 mse -> stretch_or_shrink_scale 0.001
+                    stretch_or_shrink_scale = 2*(mses[j]*1000//1e4) / 1e4
                     if gt_wave_amplitudes[j][1] < o_min < o_max < gt_wave_amplitudes[j][0]:
                         neuron.theta -= stretch_or_shrink_scale
                         neuron.synapses_weights[0] += 2 * stretch_or_shrink_scale #/ len(neuron.synapses_weights)
@@ -344,7 +347,7 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                         if j == 0:
                             neuron.synapses_weights[1] += 2 * stretch_or_shrink_scale  # / len(neuron.synapses_weights)
 
-                if not run_with_stdp:
+                if not learn:
                     neuron.supervised_stdp = None
                 else:
                     wave_amplitude = o_max - o_min
@@ -482,15 +485,18 @@ Path(f"../filters{lf}{postfix}/clk_{clk_freq}/figures").mkdir(parents=True, exis
 Path(f"../filters{lf}{postfix}/clk_{clk_freq}/parameters").mkdir(parents=True, exist_ok=True)
 
 momentum_beta = .0
-
-freqs = sorted(list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144-128, 13, -1)])))
+des_freqs = list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144, 13, -1)]))
+# des_freqs = list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144 - 24, 144 - 25, -1)]))
+# des_freqs = list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144 - 115, 13, -1)]))
+freqs = sorted(des_freqs)
 
 # init_thetas = [-1, -5, -5, -5]
 # init_weights = [11, 9, 10, 10, 10]
-init_thetas=[-162.662, -118.297, -84.919, -82.561]
-init_weights=[403.779, 79.159, 236.312, 169.819, 165.532]
+# init_thetas=[-162.662, -118.297, -84.919, -82.561]
+# init_weights=[403.779, 79.159, 236.312, 169.819, 165.532]
 
-for freq in freqs:
-    print(freq)
-    init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
+for i, freq in enumerate(freqs):
+    print(i, freq)
+    # init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
+    init_thetas, init_weights = estimated_parameters_for_resonator(freq0=freq, clk_freq=clk_freq, lf=4, polynom_deg=4)
     init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights, phase=20)

@@ -203,7 +203,6 @@ class SCTNeuron:
     def _activation_function_identity(self):
         const = self.identity_const
         c = self.membrane_potential + const
-        m = 2 * (self.identity_const + 1)
 
         if self.membrane_potential > const:
             emit_spike = 1
@@ -213,8 +212,8 @@ class SCTNeuron:
             self.rand_gauss_var = const
         else:
             self.rand_gauss_var = int(self.rand_gauss_var + c + 1)
-            if self.rand_gauss_var >= m:
-                self.rand_gauss_var = self.rand_gauss_var % m
+            if self.rand_gauss_var >= 65536:
+                self.rand_gauss_var -= 65536
                 emit_spike = 1
             else:
                 emit_spike = 0

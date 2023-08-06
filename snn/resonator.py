@@ -161,14 +161,14 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
     return network
 
 
-def trained_resonator(freq0, lf=4):
+def trained_resonator(freq0, filters_folder='filters4'):
     clk_freq = 1536
     f = freq0
     while f > 1:
         f /= 10
         clk_freq *= 10
     configured_freq = freq0 * 1_536_000 / clk_freq
-    root_folder = f'../filters{lf}/clk_1536000/parameters/'
+    root_folder = f'../{filters_folder}/clk_1536000/parameters/'
     available_resonators = np.array([int(f[2:-5]) for f in os.listdir(root_folder)])
     arg_chosen_resonator = np.argmin(np.abs(available_resonators - configured_freq))
     chosen_resonator = available_resonators[arg_chosen_resonator]
@@ -176,6 +176,7 @@ def trained_resonator(freq0, lf=4):
         parameters = json.load(f)
         thetas = parameters['thetas']
         weights = parameters['weights']
+        lf = parameters['lf']
 
     return simple_resonator(freq0, clk_freq, lf, thetas, weights)
 

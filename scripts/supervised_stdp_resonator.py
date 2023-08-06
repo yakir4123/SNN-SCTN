@@ -196,8 +196,8 @@ def estimated_parameters_for_resonator(freq0, lf, clk_freq, polynom_deg=4):
     return thetas, weights
 
 
-def search_for_parameters(freq0, lf, thetas, weights, phase):
-
+def search_for_parameters(freq0, lf, thetas, weights, phase, xi=22.5, learnable_neurons=None, gain=8):
+    learnable_neurons = learnable_neurons or [0, 1, 2, 3]
     best_lp = lp_by_lf(lf, freq0, clk_freq)
     freq0 = freq_of_resonator(clk_freq, lf, best_lp)
 
@@ -223,21 +223,34 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
     resonator_input = neuron_output(resonator.neurons[0], freq0, shift_degrees=0, phase_number=phase)
     rresonator_input = events_to_spikes(resonator_input - resonator_input[0], run_window=spikes_window,
                                         spikes_arr_size=int(clk_freq / freq0) + 1)
-    ground_truth = []
-    for phase_shift in [22.5, 67.5, 112.5, 157.5]:
-        phase_shift /= 360
-        resonator.input_full_data(sine_wave[int((1-phase_shift)*wave_length):int((20-phase_shift)*wave_length)])
-        resonator.log_out_spikes(-1)
-        resonator.forget_logs()
+    while True:
+        ground_truth = []
+        desired_xi = np.array([xi, xi + 45, xi+90, xi + 135])
+        for phase_shift in desired_xi:
+            # for mse purpose
+            phase_shift /= 360
+            resonator.input_full_data(sine_wave[int((1-phase_shift)*wave_length):int((20-phase_shift)*wave_length)])
+            resonator.log_out_spikes(-1)
+            resonator.forget_logs()
 
-        resonator.input_full_data(8*sine_wave[int((1-phase_shift)*wave_length):])
-        ground_truth.append(neuron_output(resonator.neurons[0], freq0, phase_number=phase))
+            resonator.input_full_data(gain*sine_wave[int((1-phase_shift)*wave_length):])
+            ground_truth.append(neuron_output(resonator.neurons[0], freq0, phase_number=phase))
 
-    rolling_gt = []
-    for i, gt in enumerate(ground_truth):
-        rolling_gt.append(events_to_spikes(gt-resonator_input[0], run_window=spikes_window, spikes_arr_size=int(clk_freq/freq0)+1))
 
-    gt_wave_amplitudes = [(o.max(), o.min()) for o in rolling_gt]
+        rolling_gt = []
+        for i, gt in enumerate(ground_truth):
+            rolling_gt.append(events_to_spikes(gt-resonator_input[0], run_window=spikes_window, spikes_arr_size=int(clk_freq/freq0)+1))
+
+        gt_wave_amplitudes = [(o.max(), o.min()) for o in rolling_gt]
+        if gt_wave_amplitudes[0][0] > 344:
+            gain *= .97
+        elif gt_wave_amplitudes[0][0] < 340:
+            gain *= 1.03
+        else:
+            print(f' gain {gain} ({gt_wave_amplitudes[0]})')
+            break
+
+
     # create a learning_resonator
     resonator = learning_resonator(
         lf=lf,
@@ -266,12 +279,13 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
     momentum = [0] * 4
     max_theta = -.75
 
-    y_epsilon = spikes_window * 0.0185
-    x_epsilon = len(rresonator_input) * 5 / 360
+    y_epsilon = spikes_window * 0.017
+    x_epsilon = len(rresonator_input) * 8 / 360
     gt_peaks = [argmax(gt) for gt in rolling_gt]
 
     count_to_finish = -1
     epochs_after_tuning = 100
+    epoch = 0
     with tqdm() as pbar:
         while count_to_finish != 0:
             learn = True
@@ -302,6 +316,12 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
             mses = np.array([((gt - o)**2).mean() for gt, o in zip(rolling_gt, output)])
             curr_mse = mses.mean()
             if curr_mse < min_mse:
+                if curr_mse < 15:
+                    count_to_finish = epochs_after_tuning
+                    if min_mse_tuned > 3 * curr_mse:
+                        min_mse_thetas_tuned = flat_thetas(resonator)
+                        min_mse_weights_tuned = flat_weights(resonator)
+
                 min_mse = curr_mse
                 min_neurons_mses = mses
                 learn = False
@@ -324,6 +344,8 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
             # activate weights learning
             peaks = [argmax(o)for o in output]
             for j, o in enumerate(output):
+                if j not in learnable_neurons:
+                    continue
                 o_max = o.max()
                 o_min = o.min()
                 neuron = resonator.neurons[1 + j]
@@ -355,27 +377,43 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
                     # number between 0 - 1 represent [0 - gt_wave_amplitude]
                     wave_amplitude_ratio = abs((wave_amplitude - gt_wave_amplitude) / gt_wave_amplitude)
                     # number between 0 - 1 represent [0 - 180]
-                    phase_diff_ratio = abs(peaks[j] - gt_peaks[j]) / len(o)
+                    phase_diff_ratio = min(abs(peaks[j] - gt_peaks[j]) / len(o), 10/180)
                     neuron.supervised_stdp = learning_rules[j]
                     neuron.supervised_stdp.A = (1 + wave_amplitude_ratio) * 10e-5
                     neuron.supervised_stdp.tau = 1e-5 * clk_freq / 2 * (1 + phase_diff_ratio)
 
-            wave_amplitudes = [o.max() - o.min() for o in output]
+            # check for xi for all of the neurons
+            x = np.linspace(0, 360, len(rresonator_input))
+            x0 = int(argmax(rresonator_input))
+            xi_s = np.array([x[int(argmax(output[i]))] - x[x0] for i in range(4)])
+
+            wave_amplitudes = np.array([o.max() - o.min() for o in output])
             pbar.set_postfix({'weights': flat_weights(resonator).tolist(),
                               'thetas': flat_thetas(resonator), 'mse': curr_mse,
-                              'amplitudes': wave_amplitudes, 'dc': [int(o.mean()) for o in output],
-                              'min_weight': min_mse_weights, 'min_thetas': min_mse_thetas, 'min_mse': min_mse,
+                              'amplitudes': wave_amplitudes.tolist(), 'dc': [int(o.mean()) for o in output],
+                              'min_weight': min_mse_weights.tolist(), 'min_thetas': min_mse_thetas, 'min_mse': min_mse,
                               'min_weight_tuned': min_mse_weights_tuned, 'min_thetas_tuned': min_mse_thetas_tuned, 'min_mse_tuned': min_mse_tuned,
-                              'tuned_parameters': tuned_parameters,
+                              'tuned_parameters': tuned_parameters, 'xi': xi_s.tolist(),
                               'epochs_left': epochs_after_tuning if count_to_finish < 0 else count_to_finish})
 
+            xi_diff = np.abs(xi_s - desired_xi)
+            ampl_diff = np.abs(wave_amplitudes - 130)
             resonator.forget_logs()
             pbar.update(1)
+            epoch += 1
+            # if all(xi_diff < 5) and all(ampl_diff < 10):
+            #     break
+
+            # if epoch == 10000:
+            #     min_mse_thetas_tuned = min_mse_thetas
+            #     min_mse_weights_tuned = min_mse_weights
+            #     break
+
 
     # chosen_thetas = flat_thetas(resonator)
     # chosen_weights = flat_weights(resonator)
-    chosen_thetas = min_mse_thetas
-    chosen_weights = min_mse_weights
+    chosen_thetas = min_mse_thetas_tuned
+    chosen_weights = min_mse_weights_tuned
 
     # plot the output of the neurons.
     res_resonator = simple_resonator(
@@ -480,23 +518,31 @@ def search_for_parameters(freq0, lf, thetas, weights, phase):
 lf = 4
 clk_freq = 1536000
 # postfix = '_std'
-postfix = ''
+postfix = '_xi0'
 Path(f"../filters{lf}{postfix}/clk_{clk_freq}/figures").mkdir(parents=True, exist_ok=True)
 Path(f"../filters{lf}{postfix}/clk_{clk_freq}/parameters").mkdir(parents=True, exist_ok=True)
 
 momentum_beta = .0
-des_freqs = list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144, 13, -1)]))
-# des_freqs = list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144 - 24, 144 - 25, -1)]))
-# des_freqs = list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144 - 115, 13, -1)]))
+# 0 - 52
+# 100 - 112
+des_freqs = list(set([int(freq_of_resonator(clk_freq, lf, lp)) for lp in range(144-97, 144-100, -1)]))
 freqs = sorted(des_freqs)
 
-# init_thetas = [-1, -5, -5, -5]
-# init_weights = [11, 9, 10, 10, 10]
-# init_thetas=[-162.662, -118.297, -84.919, -82.561]
-# init_weights=[403.779, 79.159, 236.312, 169.819, 165.532]
+xi0_freqs = os.listdir('../filters4_xi0/clk_1536000/parameters')
 
+freqs = xi0_freqs
+freqs = sorted([int(f[2:-5]) for f in freqs])[2 + 40*3::3]
+print(f'freqs left {len(freqs)} - {freqs}')
+init_thetas = [-39.885, -77.82, -77.841, -76.499]
+init_weights = [221.578, 141.847, 155.494, 155.293, 153.424]
+w0_gain_for_xi0, w1_gain_for_xi0, th_gain_for_xi0 = 0.6124672032074526, 0.9766487108414832, 0.1430503889076767
 for i, freq in enumerate(freqs):
     print(i, freq)
-    # init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
-    init_thetas, init_weights = estimated_parameters_for_resonator(freq0=freq, clk_freq=clk_freq, lf=4, polynom_deg=4)
-    init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights, phase=20)
+    if i > 0:
+        init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
+    # init_weights[0] *= w0_gain_for_xi0
+    # init_weights[1] *= w1_gain_for_xi0
+    # init_thetas[0] *= th_gain_for_xi0
+    init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights,
+                                                      phase=20, xi=0, learnable_neurons=[0, 1, 2, 3],
+                                                      gain=12)

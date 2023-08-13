@@ -151,7 +151,7 @@ def argmax(arr):
 
 def read_or_default(freq0, default_thetas, default_weights, lf=4, clk_freq=1536000):
     try:
-        with open(f'../filters{lf}/clk_{clk_freq}/parameters/f_{int(freq0)}.json') as f:
+        with open(f'../filters{lf}{postfix}/clk_{clk_freq}/parameters/f_{int(freq0)}.json') as f:
             full_parameters = json.load(f)
             return full_parameters['thetas'], full_parameters['weights']
     except FileNotFoundError:
@@ -242,9 +242,9 @@ def search_for_parameters(freq0, lf, thetas, weights, phase, xi=22.5, learnable_
             rolling_gt.append(events_to_spikes(gt-resonator_input[0], run_window=spikes_window, spikes_arr_size=int(clk_freq/freq0)+1))
 
         gt_wave_amplitudes = [(o.max(), o.min()) for o in rolling_gt]
-        if gt_wave_amplitudes[0][0] > 344:
+        if gt_wave_amplitudes[0][0] > 415:
             gain *= .97
-        elif gt_wave_amplitudes[0][0] < 340:
+        elif gt_wave_amplitudes[0][0] < 410:
             gain *= 1.03
         else:
             print(f' gain {gain} ({gt_wave_amplitudes[0]})')
@@ -279,8 +279,8 @@ def search_for_parameters(freq0, lf, thetas, weights, phase, xi=22.5, learnable_
     momentum = [0] * 4
     max_theta = -.75
 
-    y_epsilon = spikes_window * 0.017
-    x_epsilon = len(rresonator_input) * 8 / 360
+    y_epsilon = spikes_window * 0.035
+    x_epsilon = len(rresonator_input) * 10 / 360
     gt_peaks = [argmax(gt) for gt in rolling_gt]
 
     count_to_finish = -1
@@ -306,6 +306,9 @@ def search_for_parameters(freq0, lf, thetas, weights, phase, xi=22.5, learnable_
                 o_argmax = argmax(o)
                 if abs(o_argmax - gt_peaks[j]) <= x_epsilon:
                     tuned_parameters += 1
+                # if ((o_max - gt_wave_amplitudes[j][0]) >= -y_epsilon and
+                #         (o_min - gt_wave_amplitudes[j][1]) <= y_epsilon
+                # ):
                 if (abs(o_max - gt_wave_amplitudes[j][0]) <= y_epsilon and
                         abs(o_min - gt_wave_amplitudes[j][1]) <= y_epsilon
                 ):
@@ -333,7 +336,7 @@ def search_for_parameters(freq0, lf, thetas, weights, phase, xi=22.5, learnable_
                 min_mse_weights_tuned = flat_weights(resonator)
 
             if learn:
-                thetas_shift = [-.1*(((2*np.mean(o) - spikes_window)/spikes_window)**2)*np.sign(np.mean(o)-spikes_window/2) for o in output]
+                thetas_shift = [-.2*(((2*np.mean(o) - spikes_window)/spikes_window)**2)*np.sign(np.mean(o)-spikes_window/2) for o in output]
                 for j, neuron in enumerate(resonator.neurons[1:]):
                     bs = thetas_shift[j]
                     momentum[j] = bs + momentum_beta * momentum[j]
@@ -352,9 +355,10 @@ def search_for_parameters(freq0, lf, thetas, weights, phase, xi=22.5, learnable_
                 o_argmax = argmax(o)
 
                 if (learn and
-                        abs(o_argmax - gt_peaks[j]) <= 5 * x_epsilon and
-                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon/4 and
-                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon/4):
+                        abs(o_argmax - gt_peaks[j]) <= 5 * x_epsilon# and
+                        # abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon/4 and
+                        # abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon/4
+                ):
                     # 100 mse -> stretch_or_shrink_scale 0.001
                     stretch_or_shrink_scale = 2*(mses[j]*1000//1e4) / 1e4
                     if gt_wave_amplitudes[j][1] < o_min < o_max < gt_wave_amplitudes[j][0]:
@@ -532,17 +536,21 @@ xi0_freqs = os.listdir('../filters4_xi0/clk_1536000/parameters')
 
 freqs = xi0_freqs
 freqs = sorted([int(f[2:-5]) for f in freqs])[2 + 40*3::3]
+
+
+freqs = [105, 110, 115, 128, 130, 159, 160, 166, 190, 195, 221, 250, 288, 305, 339, 347, 372, 402, 412, 436, 462, 477, 509, 526, 545, 587, 636, 694, 763, 898][2::3]
+# 175, 279, 898, 954
+# freqs = [898]
+# init_thetas = [-106.507, -93.156, -90.817, -81.602]
+# init_weights = [359.011, 151.96, 182.411, 179.858, 167.44]
+
+freqs = [954]
+init_thetas = [-117.517, -100.7, -96.316, -85.802]
+init_weights = [387.914, 160.052, 197.197, 190.622, 177.059]
 print(f'freqs left {len(freqs)} - {freqs}')
-init_thetas = [-39.885, -77.82, -77.841, -76.499]
-init_weights = [221.578, 141.847, 155.494, 155.293, 153.424]
-w0_gain_for_xi0, w1_gain_for_xi0, th_gain_for_xi0 = 0.6124672032074526, 0.9766487108414832, 0.1430503889076767
 for i, freq in enumerate(freqs):
     print(i, freq)
-    if i > 0:
-        init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
-    # init_weights[0] *= w0_gain_for_xi0
-    # init_weights[1] *= w1_gain_for_xi0
-    # init_thetas[0] *= th_gain_for_xi0
+    # init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
     init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights,
                                                       phase=20, xi=0, learnable_neurons=[0, 1, 2, 3],
-                                                      gain=12)
+                                                      gain=26)

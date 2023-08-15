@@ -1,5 +1,6 @@
 import os
 import random
+from zipfile import BadZipFile
 
 import numpy as np
 import pandas as pd
@@ -112,14 +113,14 @@ def resample_signal(f_new, f_source, data):
     return resample(data, n_samples_new)
 
 
-def generate_spikes(resonator, data_resampled, append_with_zeros=True):
+def generate_spikes(resonator, data_resampled):
     resonator.input_full_data(data_resampled)
 
 def save_output(resonator, spikes_output_path):
     output_neuron = resonator.layers_neurons[-1].neurons[-1]
     np.savez_compressed(
         file=spikes_output_path,
-        spikes=output_neuron.out_spikes()
+        spikes=output_neuron.out_spikes(is_timestamps=False, spikes_array_size=clk_freq * 60)
     )
 
 
@@ -129,15 +130,6 @@ def create_datasets(time_of_sample_s, overlap, trials, output_path):
     spikes_in_sample = signal_fs * time_of_sample_s
     step = int(spikes_in_sample * (1 - overlap))
     for trial in tqdm(trials):
-        # every sample of 1s is 8Kb of memory!
-        # try:
-        # for ch_name in os.listdir(f'{trials_folder}/{trial}'):
-        #     for clk_freq in os.listdir(f'{trials_folder}/{trial}/{ch}'):
-        #         for f0 in os.listdir(f'{trials_folder}/{trial}/{ch}/{clk_freq}'):
-        #             np.load(f'{trials_folder}/{trial}/{ch_name}/{clk_freq}/{f0}')['spikes'].astype(np.int8)
-        # except ValueError:
-        #     raise ValueError(f'Exception at {trials_folder}/{trial}/{ch_name}/{clk_freq}/{f0}')
-
         spikes = np.array([
             [
                 np.load(f'{trials_folder}/{trial}/{ch_name}/{clk_freq}/{f0}')['spikes'].astype(np.int8)
@@ -160,7 +152,26 @@ def is_file_exist(path: str):
     if not path.is_file():
         return False
     # to check if its valid file
-    return len(np.load(path)['spikes']) > 0
+    try:
+        loaded_spikes = np.load(path)['spikes']
+        if len(loaded_spikes) == 0:
+            return False
+        if sum(loaded_spikes > 1) > 0:
+            # convert timestamps encoding to spikes encoding
+            spikes_encode = np.zeros(60 * clk_freq).astype('int8')
+            if loaded_spikes[-1] >= 60 * clk_freq:
+                raise ValueError(f'it seems that {path}, is not an array of spikes represented by spikes neither by '
+                                 f'timestamps.')
+            spikes_encode[loaded_spikes] = 1
+            np.savez_compressed(
+                file=path,
+                spikes=spikes_encode
+            )
+        return True
+
+    except BadZipFile as e:
+        print(path)
+        raise e
 
 resonators = [
     1.1, 1.3, 1.6, 1.9, 2.2,
@@ -174,8 +185,10 @@ resonators = [
 
 fs = 128
 trails = [
-        3, 4,5,6,7,
-        # 10,11,12,13,14,
+        # 3,4,5,
+    # 6,
+        # 10
+        11,12,13,14,
         # 17,18,19,20,21,
         # 24,25,26,27,28,
         # 31,32,33,34
@@ -198,13 +211,13 @@ channels = [
     # 'T7',
     # 'F7',
     # 'P8',
-    # 'T8',
+    'T8',
     # 'FC6',
     # 'F4',
     # 'F8',
     # 'AF4',
     # 'P7',
-    'O1',
+    # 'O1',
 ]
 
 n_channels = len(channels)
@@ -216,6 +229,7 @@ minutes_range = {
     'unfocus': [13,14,15,16,17,18,19],
     'drowsed': [23, 24,25,26,27,28,29],
 }
+
 print(channels)
 total_minutes = sum(map(len, minutes_range.values()))
 clk_freq = 153600
@@ -255,4 +269,5 @@ with tqdm(total=n_channels * len(trails) * n_resonators * total_minutes) as pbar
                         pbar.set_description(f"T{trial}, Ch {ch} - {f0}, M{m}")
                         pbar.update()
 
+timestamps_to_spikes()
 # create_datasets(3, .5, range(31, 35), '../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset')

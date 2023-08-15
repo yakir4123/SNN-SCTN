@@ -250,7 +250,7 @@ class SCTNeuron:
             return ts
         if spikes_array_size == -1:
             spikes_array_size = ts[-1]
-        res = np.zeros(spikes_array_size).astype('int64')
+        res = np.zeros(spikes_array_size).astype('int8')
         res[ts] = 1
         return res
 

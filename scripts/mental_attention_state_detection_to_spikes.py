@@ -1,5 +1,4 @@
 import os
-import random
 from zipfile import BadZipFile
 
 import numpy as np
@@ -12,7 +11,7 @@ from scipy.signal import butter, filtfilt
 
 from tqdm import tqdm
 from pathlib import Path
-from snn.resonator import create_excitatory_inhibitory_resonator, trained_resonator
+from snn.resonator import trained_resonator
 
 
 def plot_spectrogram(data, fs, fmin, fmax):
@@ -116,6 +115,7 @@ def resample_signal(f_new, f_source, data):
 def generate_spikes(resonator, data_resampled):
     resonator.input_full_data(data_resampled)
 
+
 def save_output(resonator, spikes_output_path):
     output_neuron = resonator.layers_neurons[-1].neurons[-1]
     np.savez_compressed(
@@ -123,8 +123,10 @@ def save_output(resonator, spikes_output_path):
         spikes=output_neuron.out_spikes(False, clk_freq * 60).astype('int8')
     )
 
+
 def resonator_fname_to_freq(name):
     return float(name[:-4])
+
 
 def create_datasets(time_of_sample_s, overlap, trials, signal_fs, output_path):
     trials_folder = '../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes'
@@ -138,7 +140,8 @@ def create_datasets(time_of_sample_s, overlap, trials, signal_fs, output_path):
                     minute = int(minute)
                     for ch_name in os.listdir(f'{trials_folder}/{trial}/{label}/{minute}'):
                         for clk_freq in os.listdir(f'{trials_folder}/{trial}/{label}/{minute}/{ch_name}'):
-                            resonator_freqs = os.listdir(f'{trials_folder}/{trial}/{label}/{minute}/{ch_name}/{clk_freq}')
+                            resonator_freqs = os.listdir(
+                                f'{trials_folder}/{trial}/{label}/{minute}/{ch_name}/{clk_freq}')
                             resonator_freqs = sorted(resonator_freqs, key=resonator_fname_to_freq)
                             for f0 in resonator_freqs:
                                 spikes.append(
@@ -151,7 +154,7 @@ def create_datasets(time_of_sample_s, overlap, trials, signal_fs, output_path):
                     spikes = np.array(spikes)
                     for sample_start_index in range(0, spikes.shape[-1] - spikes_in_sample, step):
                         sample_start_time = sample_start_index / signal_fs
-                        file_name = f'{trial}_{sample_start_time + minute*60}'
+                        file_name = f'{trial}_{sample_start_time + minute * 60}'
                         path = f'{output_path}/{file_name}.npz'
                         path = Path(path)
                         path.parent.mkdir(parents=True, exist_ok=True)
@@ -164,6 +167,7 @@ def create_datasets(time_of_sample_s, overlap, trials, signal_fs, output_path):
                             spikes=spikes[:, sample_start_index:sample_start_index + spikes_in_sample]
                         )
                         pbar.update(1)
+
 
 def is_file_exist(path: str):
     path = Path(path)
@@ -192,26 +196,25 @@ def is_file_exist(path: str):
         print(path)
         raise e
 
-resonators = [
-    1.1, 1.3, 1.6, 1.9, 2.2,
-    2.5, 2.88, 3.05, 3.39, 3.7,
-    4.12, 4.62, 5.09, 5.45, 5.87,
-    6.36, 6.8, 7.6, 8.6, 10.5,
-    11.5, 12.8, 15.8, 16.6, 19.4,
-    22.0, 24.8, 28.4, 30.5, 34.7,
-    37.2, 40.2, 43.2, 47.7, 52.6, 57.2
-]
+
+clk_resonators = {
+    15360: [1.1, 1.3, 1.6, 1.9, 2.2, 2.5, 2.88, 3.05, 3.39, 3.7, 4.12, 4.62, 5.09, 5.45, 5.87, 6.36, 6.8, 7.6, 8.6],
+    153600: [10.5, 11.5, 12.8, 15.8, 16.6, 19.4, 22.0, 24.8, 28.4, 30.5, 34.7, 37.2, 40.2, 43.2, 47.7, 52.6, 57.2]
+}
 
 fs = 128
 trails = [
     4,
-        # 3, 4, 5, 6, 7,
-        # 10, 11,12,13,14,
-        # 17,18,19,20,21,
-        # 24,25,26,27, 28,
-        # 31,32,33,34
-    ]
+    # 3, 4, 5, 6, 7,
+    # 10, 11,12,13,14,
+    # 17,18,19,20,21,
+    # 24,25,26,27, 28,
+    # 31,32,33,34
+]
 
+channels = [
+    'AF3', 'O2', 'F3', 'FC5', 'T7', 'F7', 'P8', 'T8', 'FC6', 'F4', 'F8', 'AF4', 'P7', 'O1',
+]
 print('Find constant normalization value!')
 normalization_value = -np.inf
 for trial in trails:
@@ -219,7 +222,6 @@ for trial in trails:
     for ch_i, ch in enumerate(data.columns):
         ch_data = data[ch].values
         normalization_value = np.max([normalization_value, np.max(np.abs(ch_data))])
-
 
 channels = [
     # 'AF3',
@@ -230,17 +232,18 @@ channels = [
     # 'F7',
     # 'P8',
     # 'T8',
-    # 'FC6',
+    'FC6',
+
     # 'F4',
     # 'F8',
     # 'AF4',
     # 'P7',
-    'O1',
+    # 'O1',
 ]
 
 n_channels = len(channels)
 # n_resonators = len(sum(clk_resonators.values(), start=[]))
-n_resonators = len(resonators)
+n_resonators = len(sum(clk_resonators.values(), []))
 
 minutes_range = {
     'focus': [4]
@@ -251,7 +254,6 @@ minutes_range = {
 
 print(channels)
 total_minutes = sum(map(len, minutes_range.values()))
-clk_freq = 153600
 with tqdm(total=n_channels * len(trails) * n_resonators * total_minutes) as pbar:
     for trial in trails:
         data = get_trial_data(trial)
@@ -260,33 +262,33 @@ with tqdm(total=n_channels * len(trails) * n_resonators * total_minutes) as pbar
             # Take only first 30 minutes.
             ch_data = ch_data[:fs * (60 * 30)]
             ch_data /= normalization_value
-            for f_i, f0 in enumerate(resonators):
+            for clk_freq, resonators in clk_resonators.items():
+                for f_i, f0 in enumerate(resonators):
 
-                resonator = trained_resonator(
-                    freq0=float(f0),
-                    filters_folder='filters4_xi0'
-                )
+                    resonator = trained_resonator(
+                        freq0=float(f0),
+                        filters_folder='filters4_xi0'
+                    )
 
-                resonator.log_out_spikes(-1)
-                output_neuron = resonator.layers_neurons[-1].neurons[-1]
-                resonator.input_full_data(np.zeros(resonator.clk_freq * 5))
-                output_neuron.forget_logs()
-                # minute by minute input the data.
-                for label, labeled_minutes_range in minutes_range.items():
-                    for m in labeled_minutes_range:
-                        output_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes/{trial}/{label}/{m}/{ch}/{clk_freq}/{f0}.npz'
-                        if not is_file_exist(output_folder):
-                            data_resampled = resample_signal(clk_freq, fs, ch_data[fs * m * 60: fs * (m+1) * 60])
-                            resonator.input_full_data(data_resampled)
-                            save_output(resonator, output_folder)
-                            output_neuron.forget_logs()
-                        pbar.set_description(f"T{trial}, Ch {ch} - {f0}, M{m}")
-                        pbar.update()
+                    resonator.log_out_spikes(-1)
+                    output_neuron = resonator.layers_neurons[-1].neurons[-1]
+                    resonator.input_full_data(np.zeros(resonator.clk_freq * 5))
+                    output_neuron.forget_logs()
+                    # minute by minute input the data.
+                    for label, labeled_minutes_range in minutes_range.items():
+                        for m in labeled_minutes_range:
+                            output_folder = f'../datasets/EEG_data_for_Mental_Attention_State_Detection/EEG_spikes/{trial}/{label}/{m}/{ch}/{clk_freq}/{f0}.npz'
+                            if not is_file_exist(output_folder):
+                                data_resampled = resample_signal(clk_freq, fs, ch_data[fs * m * 60: fs * (m + 1) * 60])
+                                resonator.input_full_data(data_resampled)
+                                save_output(resonator, output_folder)
+                                output_neuron.forget_logs()
+                            pbar.set_description(f"T{trial}, Ch {ch} - {f0}, M{m}")
+                            pbar.update()
 
-# timestamps_to_spikes()
-create_datasets(time_of_sample_s=.25,
-                overlap=.5,
-                trials=trails,
-                signal_fs=153600,
-                output_path='../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset',
-                )
+# create_datasets(time_of_sample_s=.25,
+#                 overlap=.5,
+#                 trials=trails,
+#                 signal_fs=153600,
+#                 output_path='../datasets/EEG_data_for_Mental_Attention_State_Detection/train_test_dataset',
+#                 )

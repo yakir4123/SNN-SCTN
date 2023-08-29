@@ -181,6 +181,30 @@ def trained_resonator(freq0, filters_folder='filters4'):
     return simple_resonator(freq0, clk_freq, lf, thetas, weights)
 
 
+def delta_resonator(freq0, filters_folder='filters4'):
+    resonator = trained_resonator(freq0, filters_folder)
+    neuron = create_SCTN()
+    neuron.synapses_weights = np.array([3.0])
+    neuron.leakage_period = np.inf
+    neuron.theta = -1
+    neuron.threshold_pulse = 3
+    neuron.reset_to = 1.5
+    neuron.activation_function = BINARY
+    resonator.add_layer(SCTNLayer([neuron]))
+
+    neuron = create_SCTN()
+    neuron.synapses_weights = np.array([10.0])
+    neuron.leakage_period = np.inf
+    neuron.theta = 0
+    neuron.leakage_factor = 1
+    neuron.leakage_period = 1
+    neuron.threshold_pulse = 30
+    neuron.reset_to = 10
+    neuron.activation_function = BINARY
+    resonator.add_layer(SCTNLayer([neuron]))
+    return resonator
+
+
 def simple_resonator(
         freq0,
         clk_freq,

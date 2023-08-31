@@ -232,13 +232,12 @@ channels = [
     # 'F7',
     # 'P8',
     # 'T8',
-    'FC6',
-
+    # 'FC6',
     # 'F4',
     # 'F8',
     # 'AF4',
     # 'P7',
-    # 'O1',
+    'O1',
 ]
 
 n_channels = len(channels)
@@ -246,7 +245,8 @@ n_channels = len(channels)
 n_resonators = len(sum(clk_resonators.values(), []))
 
 minutes_range = {
-    'focus': [4]
+    # 'focus': [4]
+    'drowsed': [28]
     # 'focus': [3,4,5,6,7,8,9],
     # 'unfocus': [13,14,15,16,17,18,19],
     # 'drowsed': [23, 24,25,26,27,28,29],

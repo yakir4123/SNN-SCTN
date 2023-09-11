@@ -37,11 +37,11 @@ def topography_map(dat, fig=None, ax=None, feature='std', vmin=0, vmax=1):
     df.rename(columns={'index':'channel'}, inplace=True)
 
     bio_semi_64 = [
-        {'num': 1.0, 'x': -25.0, 'y': 0.3494, 'channel': 'AF3'},
-        {'num': 2.0, 'x': -54.0, 'y': 0.4344, 'channel': 'F7'},
-        {'num': 3.0, 'x': -39.0, 'y': 0.2833, 'channel': 'F3'},
-        {'num': 4.0, 'x': -69.0, 'y': 0.340, 'channel': 'FC5'},
-        {'num': 5.0, 'x': -90.0, 'y': 0.4344, 'channel': 'T7'},
+        {'num': 1.0, 'x':  -25.0, 'y': 0.3494, 'channel': 'AF3'},
+        {'num': 2.0, 'x':  -54.0, 'y': 0.4344, 'channel': 'F7'},
+        {'num': 3.0, 'x':  -39.0, 'y': 0.2833, 'channel': 'F3'},
+        {'num': 4.0, 'x':  -69.0, 'y': 0.340, 'channel': 'FC5'},
+        {'num': 5.0, 'x':  -90.0, 'y': 0.4344, 'channel': 'T7'},
         {'num': 6.0, 'x': 234.0, 'y': 0.4344, 'channel': 'P7'},
         {'num': 7.0, 'x': 198.0, 'y': 0.4344, 'channel': 'O1'},
         {'num': 8.0, 'x': 162.0, 'y': 0.4344, 'channel': 'O2'},
@@ -77,10 +77,13 @@ def topography_map(dat, fig=None, ax=None, feature='std', vmin=0, vmax=1):
             if (r - dr/2) > radius:
                 zi[j,i] = "nan"
 
+    vmin = vmin or zi[~np.isnan(zi)].min()
+    vmax = vmax or zi[~np.isnan(zi)].max()
+
     # return np.nanmin(zi), np.nanmax(zi)
     # use different number of levels for the fill and the lines
     levels = np.linspace(vmin, vmax, 60)
-    CS = ax.contourf(xi, yi, zi, levels=levels, cmap=plt.cm.jet, zorder=1)#, vmin=vmin, vmax=vmax)
+    CS = ax.contourf(xi, yi, zi, levels=levels, cmap=plt.cm.jet, zorder=1)
     levels = np.linspace(vmin, vmax, 15)
     ax.contour(xi, yi, zi, levels=levels, colors="grey", zorder=2)
 

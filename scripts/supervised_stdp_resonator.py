@@ -10,7 +10,7 @@ from numpy.polynomial.polynomial import Polynomial
 
 
 from snn.layers import SCTNLayer
-from snn.resonator import lp_by_lf
+from snn.resonator import lp_by_lf, trained_resonator
 from snn.spiking_network import SpikingNetwork
 from snn.spiking_neuron import create_SCTN, IDENTITY
 from snn.resonator import test_resonator_on_chirp, freq_of_resonator
@@ -519,12 +519,52 @@ def search_for_parameters(freq0, lf, thetas, weights, phase, xi=22.5, learnable_
     return chosen_thetas, chosen_weights
 
 
+def run_chirp(freq0, spikes_window=500):
+# run a chirp test
+    res_resonator = trained_resonator(
+        freq0=freq0,
+        filters_folder='filters4_xi0'
+    )
+
+    for nid in range(1,5):
+        res_resonator.log_out_spikes(nid)
+
+    start_freq = 0
+    spectrum = 2 * freq0
+    res_resonator.forget_logs()
+
+    step = 100 / clk_freq
+    test_size = int(spectrum / step)
+    test_resonator_on_chirp(
+        res_resonator,
+        start_freq=start_freq,
+        step=step,
+        test_size=test_size,
+        clk_freq=clk_freq
+    )
+
+    spikes_neuron = res_resonator.neurons[-1]
+    y_events = spikes_neuron.out_spikes()
+    y_spikes = np.zeros(test_size)
+    y_spikes[y_events] = 1
+    y_spikes = np.convolve(y_spikes, np.ones(spikes_window, dtype=int), 'valid')
+
+    with open(f"../filters{lf}{postfix}/clk_{clk_freq}/chirp/f_{int(freq0)}.json", 'w') as best_params_f:
+        parameters = {
+            'freq0': float(freq),
+            'max': np.max(y_spikes),
+            "mean": np.mean(y_spikes),
+            'min': np.min(y_spikes),
+        }
+        json.dump(parameters, best_params_f, indent=4)
+
 lf = 4
 clk_freq = 1536000
 # postfix = '_std'
 postfix = '_xi0'
 Path(f"../filters{lf}{postfix}/clk_{clk_freq}/figures").mkdir(parents=True, exist_ok=True)
 Path(f"../filters{lf}{postfix}/clk_{clk_freq}/parameters").mkdir(parents=True, exist_ok=True)
+Path(f"../filters{lf}{postfix}/clk_{clk_freq}/chirp").mkdir(parents=True, exist_ok=True)
 
 momentum_beta = .0
 # 0 - 52
@@ -538,19 +578,32 @@ freqs = xi0_freqs
 freqs = sorted([int(f[2:-5]) for f in freqs])[2 + 40*3::3]
 
 
-freqs = [105, 110, 115, 128, 130, 159, 160, 166, 190, 195, 221, 250, 288, 305, 339, 347, 372, 402, 412, 436, 462, 477, 509, 526, 545, 587, 636, 694, 763, 898][2::3]
+freqs = [105, 110, 115, 128, 130, 159, 160, 166, 190, 195, 221, 250, 288, 305, 339, 347, 372, 402, 412, 436, 462, 477, 509, 526, 545, 587, 636, 694, 763, 898]
 # 175, 279, 898, 954
 # freqs = [898]
 # init_thetas = [-106.507, -93.156, -90.817, -81.602]
 # init_weights = [359.011, 151.96, 182.411, 179.858, 167.44]
 
-freqs = [954]
-init_thetas = [-117.517, -100.7, -96.316, -85.802]
-init_weights = [387.914, 160.052, 197.197, 190.622, 177.059]
-print(f'freqs left {len(freqs)} - {freqs}')
-for i, freq in enumerate(freqs):
-    print(i, freq)
-    # init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
-    init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights,
-                                                      phase=20, xi=0, learnable_neurons=[0, 1, 2, 3],
-                                                      gain=26)
+# init_thetas = [-117.517, -100.7, -96.316, -85.802]
+# init_weights = [387.914, 160.052, 197.197, 190.622, 177.059]
+# print(f'freqs left {len(freqs)} - {freqs}')
+# for i, freq in enumerate(freqs):
+#     print(i, freq)
+#     # init_thetas, init_weights = read_or_default(freq, default_thetas=init_thetas, default_weights=init_weights)
+#     init_thetas, init_weights = search_for_parameters(freq, lf, init_thetas, init_weights,
+#                                                       phase=20, xi=0, learnable_neurons=[0, 1, 2, 3],
+#                                                       gain=26)
+
+# run chirps on these signals:
+freqs = np.array([
+    [110, 130, 160, 190, 221, 250, 195, 282, 305, 347, 402, 436],
+    [288, 305, 339, 372, 412, 462, 898, 105, 115, 128, 159, 166],
+    [509, 545, 587, 636, 694, 763, 477, 526,   0,   0,   0,   0]
+])[2, :]
+
+print(f'run on {freqs}')
+for freq in freqs:
+    if freq > 0:
+        run_chirp(freq, spikes_window=100)
+
+

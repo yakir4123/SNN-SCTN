@@ -82,7 +82,7 @@ class SCTNeuron:
         self.log_rand_gauss_var = log_rand_gauss_var
         self.log_out_spikes = log_out_spikes
         self._membrane_potential_graph = np.zeros(100).astype('float32')
-        self.membrane_sample_max_window = np.zeros(10000).astype('float32')
+        self.membrane_sample_max_window = np.zeros(1).astype('float32')
         self._out_spikes = np.zeros(100).astype('int64')
         self.rand_gauss_var_graph = np.zeros(100).astype('int32')
         self.index = 0

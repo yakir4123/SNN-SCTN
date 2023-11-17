@@ -16,7 +16,6 @@ def save_model(network, path):
 
 def network_to_dict(network):
     return {
-        'clk_freq': network.clk_freq,
         'amplitude': network.amplitude,
         'enable_by': list(network.enable_by),
         'spikes_graph': graph_to_dict(network.spikes_graph),

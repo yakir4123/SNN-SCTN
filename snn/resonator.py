@@ -247,7 +247,8 @@ def simple_resonator(
     return network
 
 @njit
-def test_resonator_on_chirp(network, test_size=10_000_000, start_freq=0, step=1 / 200000, clk_freq=1536000, amplifier=1):
+def test_resonator_on_chirp(network, test_size=10_000_000, start_freq=0, clk_freq=1536000, step=None, amplifier=1):
+    step = step or 1/clk_freq
     batch_size = 50_000
     shift = 0
     while test_size > 0:

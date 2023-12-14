@@ -1,0 +1,7 @@
+numpy
+matplotlib
+scipy
+numba
+networkx
+tqdm
+notebook==6.5.6

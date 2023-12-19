@@ -329,7 +329,6 @@ def leraning_algorithm():
                 mse_to_json = list(mses[i - 1])
                 print('mse', list(mses[i - 1]))
 
-
     # Create a dictionary with the parameters
 
     params = {
@@ -338,11 +337,13 @@ def leraning_algorithm():
         "freq0": freq0,
         "lf": lf,
         "lp": best_lp,
+        "chosen_bias": chosen_bias,
+        "chosen_weights": chosen_weights,
         "mse": mse_to_json,
         "mse_mean": sum(mse_to_json) / len(mse_to_json),
-        "weights": flat_weights(resonator).tolist(),
-        "thetas": flat_thetas(resonator),
-        "iterations": str(i-1)
+        "weight_results": flat_weights(resonator).tolist(),
+        "theta_results": flat_thetas(resonator),
+        "iterations": str(i - 1)
     }
 
     # Construct the file path with freq0 in the name
@@ -352,20 +353,22 @@ def leraning_algorithm():
     with open(json_file_path, "w") as json_file:
         json.dump(params, json_file, indent=4)
 
-    return {'weights': flat_weights(resonator).tolist(), 'thetas': flat_thetas(resonator)}
+    return flat_weights(resonator).tolist(), flat_thetas(resonator)
     # return {'weights': flat_weights(resonator).tolist(), 'thetas': flat_thetas(resonator), 'mse': mses[i, :].mean(),
     #         'amplitudes': wave_amplitudes, 'dc': [o.mean() for o in output], 'tuned_parameters': tuned_parameters}
 
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 99
-    end_freq = 1
-    chosen_bias = [-1.801, -8.925, -10.181, -10.475]
-    chosen_weights = [22.156, 18.056, 17.582, 20.489, 20.544]
-    for i in range(start_freq, end_freq-1, -1):
+    start_freq = 105
+    end_freq = 1000
+    chosen_bias = [-2.63, -10.476, -10.883, -10.588]
+    chosen_weights = [ 21.915, 16.815, 20.926, 21.743, 21.161]
+    #for i in range(start_freq, end_freq - 1, -1):
+    for i in range(start_freq, end_freq):
         clk_freq = 1536000
         input_freq0 = i
+        print("input_freq0 = ", i)
         lf = 4
         best_lp = lp_by_lf(lf, input_freq0, clk_freq)
         freq0 = freq_of_resonator(clk_freq, lf, best_lp)
@@ -398,7 +401,8 @@ if __name__ == '__main__':
 
         for phase_shift in phase_shifts:
             phase_shift /= 360
-            resonator.input_full_data(sine_wave[int((1 - phase_shift) * wave_length):int((20 - phase_shift) * wave_length)])
+            resonator.input_full_data(
+                sine_wave[int((1 - phase_shift) * wave_length):int((20 - phase_shift) * wave_length)])
             resonator.log_out_spikes(-1)
             resonator.forget_logs()
 
@@ -427,7 +431,4 @@ if __name__ == '__main__':
             resonator.log_out_spikes(i)
             neuron.supervised_stdp = None
 
-
-        weights, thetas = leraning_algorithm()
-        chosen_bias = thetas
-        chosen_weights = weights
+        chosen_weights, chosen_bias = leraning_algorithm()

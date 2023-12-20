@@ -41,26 +41,26 @@ def events_to_spikes(events, run_window=0, spikes_arr_size=-1):
 
 
 # ========================================================================================
-def amplify_spikes(base_spikes, spikes_window, base_min, base_max, amplify):
-    base_spikes = events_to_spikes(base_spikes - resonator_input[0], spikes_arr_size=int(clk_freq / freq0) + 1)
-    result = np.zeros_like(base_spikes)
-    result[np.arange(len(base_spikes)) % 2 == 1] = 1
-    dc = (base_max + base_min) / 2
-    for i in range(spikes_window, len(result), spikes_window):
-        slice_spikes = base_spikes[i:i + spikes_window]
-        if len(slice_spikes) < spikes_window:
-            break
-        curr_spikes = np.sum(slice_spikes) - dc
-        new_spikes = int(curr_spikes * amplify)
-
-        if new_spikes > 0:
-            spikes_ts = np.linspace(0, spikes_window, new_spikes).astype(int) // 2 * 2 + i
-            result[spikes_ts] = 1
-        else:
-            spikes_ts = np.linspace(0, spikes_window, abs(new_spikes)).astype(int) // 2 * 2 - 1 + i
-            result[spikes_ts] = 0
-    result = np.where(result == 1)[0]
-    return result
+# def amplify_spikes(base_spikes, spikes_window, base_min, base_max, amplify):
+#     base_spikes = events_to_spikes(base_spikes - resonator_input[0], spikes_arr_size=int(clk_freq / freq0) + 1)
+#     result = np.zeros_like(base_spikes)
+#     result[np.arange(len(base_spikes)) % 2 == 1] = 1
+#     dc = (base_max + base_min) / 2
+#     for i in range(spikes_window, len(result), spikes_window):
+#         slice_spikes = base_spikes[i:i + spikes_window]
+#         if len(slice_spikes) < spikes_window:
+#             break
+#         curr_spikes = np.sum(slice_spikes) - dc
+#         new_spikes = int(curr_spikes * amplify)
+#
+#         if new_spikes > 0:
+#             spikes_ts = np.linspace(0, spikes_window, new_spikes).astype(int) // 2 * 2 + i
+#             result[spikes_ts] = 1
+#         else:
+#             spikes_ts = np.linspace(0, spikes_window, abs(new_spikes)).astype(int) // 2 * 2 - 1 + i
+#             result[spikes_ts] = 0
+#     result = np.where(result == 1)[0]
+#     return result
 
 
 # ========================================================================================
@@ -341,21 +341,28 @@ def leraning_algorithm():
     #         'amplitudes': wave_amplitudes, 'dc': [o.mean() for o in output], 'tuned_parameters': tuned_parameters}
 
 
+
+
+# ========================================================================================
+
+
+
+
 if __name__ == '__main__':
     # ========================================================================================
-        start_freq = 33.4
-        end_freq = 10
-        step_size = -0.4
-        chosen_weights = [7.199, 5.736, 6.216, 6.036, 6.675]
-        chosen_bias = [-0.752, -3.224, -3.143, -3.511]
+    start_freq =  13
+    end_freq = 40
+    step_size = -0.4
+    chosen_weights = [ 33.458, 27.885, 21.365, 22.532, 23.455]
+    chosen_bias = [ -2.394, -10.547, -11.354, -11.746]
 
     # for i in range(start_freq, end_freq - 1, -1):
-    #for i in range(start_freq, end_freq):
+    for i in range(start_freq, end_freq):
     #for i in np.arange(start_freq, end_freq, step_size):
         clk_freq = 1536000
         input_freq0 = start_freq
         print("input_freq0 = ", start_freq)
-        lf = 4
+        lf = 5
         best_lp = lp_by_lf(lf, input_freq0, clk_freq)
         freq0 = freq_of_resonator(clk_freq, lf, best_lp)
         gain = 12

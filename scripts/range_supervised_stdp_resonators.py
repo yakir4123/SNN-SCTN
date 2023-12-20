@@ -343,25 +343,18 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 312
-    end_freq = 1000
-    #step_size = -0.5
-    chosen_weights = [94.035,
-                      47.473,
-                      62.758,
-                      67.52,
-                      61.822]
-    chosen_bias = [-23.51,
-                   -31.445,
-                   -33.901,
-                   -30.956]
+        start_freq = 33.4
+        end_freq = 10
+        step_size = -0.4
+        chosen_weights = [7.199, 5.736, 6.216, 6.036, 6.675]
+        chosen_bias = [-0.752, -3.224, -3.143, -3.511]
 
     # for i in range(start_freq, end_freq - 1, -1):
-    for i in range(start_freq, end_freq):
-        # for i in np.arange(start_freq, end_freq, step_size):
+    #for i in range(start_freq, end_freq):
+    #for i in np.arange(start_freq, end_freq, step_size):
         clk_freq = 1536000
-        input_freq0 = i
-        print("input_freq0 = ", i)
+        input_freq0 = start_freq
+        print("input_freq0 = ", start_freq)
         lf = 4
         best_lp = lp_by_lf(lf, input_freq0, clk_freq)
         freq0 = freq_of_resonator(clk_freq, lf, best_lp)

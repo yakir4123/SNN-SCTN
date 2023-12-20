@@ -22,7 +22,6 @@ def neuron_output(neuron, signal_freq, shift_degrees=0, phase_number=10):
         ]
     if len(y_events) == 0:
         return y_events
-    # y_events -= int(((phase_number-1)/signal_freq) * clk_freq + shift_samples)
     return y_events
 
 
@@ -160,16 +159,6 @@ def argmax(arr):
 # ========================================================================================
 def leraning_algorithm():
     epochs = 650
-    # title_fontsize = 21
-    # label_fontsize = 18
-    # tick_fontsize = 14
-    #
-    # phase_axs = 0
-    # mse_axs = 1
-    # phase_gt_ratio_axs = 2
-    # amplitude_gt_ratio_axs = 3
-    # delta_weights_axs = 4
-    # delta_biases_axs = 5
 
     heights_ratios = np.ones(6)
     heights_ratios[0] = 2
@@ -198,11 +187,6 @@ def leraning_algorithm():
     x_epsilon = len(rresonator_input) * 7 / 360
 
     gt_peaks = [argmax(gt) for gt in rolling_gt]
-    # x_phase = np.linspace(0, 360, len(rresonator_input))
-    #
-    # phase_lines = []
-    #
-    # norm = 360 / len(rresonator_input)
 
     areas_sns = [[], [], [], []]
     start_sns = [-1] * 4
@@ -293,7 +277,6 @@ def leraning_algorithm():
                 ):
                     tuned_parameters += 1
 
-                # phase_diff_ratio = abs(peaks[j] - gt_peaks[j])  # number between 0 - 1 represent [0 - 180]
                 if not run_with_stdp:
                     neuron.supervised_stdp = None
                     amplitude_ratio[i, j] = amplitude_ratio[i - 1, j]
@@ -360,12 +343,22 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 105
+    start_freq = 312
     end_freq = 1000
-    chosen_bias = [-2.63, -10.476, -10.883, -10.588]
-    chosen_weights = [ 21.915, 16.815, 20.926, 21.743, 21.161]
-    #for i in range(start_freq, end_freq - 1, -1):
+    #step_size = -0.5
+    chosen_weights = [94.035,
+                      47.473,
+                      62.758,
+                      67.52,
+                      61.822]
+    chosen_bias = [-23.51,
+                   -31.445,
+                   -33.901,
+                   -30.956]
+
+    # for i in range(start_freq, end_freq - 1, -1):
     for i in range(start_freq, end_freq):
+        # for i in np.arange(start_freq, end_freq, step_size):
         clk_freq = 1536000
         input_freq0 = i
         print("input_freq0 = ", i)

@@ -227,9 +227,9 @@ def leraning_algorithm(lf, freq0, best_lp, chosen_bias, chosen_weights, clk_freq
                 # next condition is to check if the peak is in the right place.
                 o_argmax = argmax(o)
 
-                if (abs(o_argmax - gt_peaks[j]) <= 1.5 * x_epsilon and
-                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon / 3 and
-                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon / 3
+                if (abs(o_argmax - gt_peaks[j]) <= 2 * x_epsilon and
+                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon / 2 and
+                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon / 2
                 ):
                     if start_sns[j] == -1:
                         start_sns[j] = i
@@ -269,8 +269,8 @@ def leraning_algorithm(lf, freq0, best_lp, chosen_bias, chosen_weights, clk_freq
                     wave_amplitude_ratio = abs((
                                                        wave_amplitude - gt_wave_amplitude) / gt_wave_amplitude)  # number between 0 - 1 represent [0 - gt_wave_amplitude]
                     neuron.supervised_stdp = learning_rules[j]
-                    neuron.supervised_stdp.A = (1 + wave_amplitude_ratio) * 10e-5
-                    neuron.supervised_stdp.tau = clk_freq / freq0 * (10 / 180 + abs(peaks[j] - gt_peaks[j]) / len(o))
+                    neuron.supervised_stdp.A = (1 + wave_amplitude_ratio) * 10e-6
+                    neuron.supervised_stdp.tau = clk_freq / freq0 * (5 / 180 + abs(peaks[j] - gt_peaks[j]) / len(o))
 
                 amplitude_ratio[i, j] = abs((o_max - gt_wave_amplitudes[j][0]))
 

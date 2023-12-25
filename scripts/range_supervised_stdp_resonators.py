@@ -11,7 +11,7 @@ from snn.resonator import freq_of_resonator, lp_by_lf
 # Global Variables
 JSON_FILE_PATH = "../filters4_xi0/clk_1536000/parameters/ecg/lf4"
 
-JSON_FILE_PATH_RESULTS = "../filters4_xi0/clk_153600/lf4/"
+JSON_FILE_PATH_RESULTS = "../filters4_xi0/clk_153600/ecg/lf4/"
 # ========================================================================================
 # def neuron_output(neuron, signal_freq, shift_degrees=0, phase_number=10):
 def neuron_output(clk_freq, neuron, signal_freq, shift_degrees=0, phase_number=10):

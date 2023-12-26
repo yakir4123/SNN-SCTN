@@ -341,7 +341,7 @@ def run(freq0,lf,lp,chosen_weights,chosen_bias,clk_freq=1536000,end_freq=None,st
     print(freq0)
     lp = lp_by_lf(lf, freq0, clk_freq)
     freq0 = freq_of_resonator(clk_freq, lf, lp)
-    print(freq0)
+    print(freq0,clk_freq)
     gain = 12
     duration = 15 / freq0
     x = np.linspace(0, duration, int(duration * clk_freq))

@@ -9,9 +9,9 @@ from snn.spiking_neuron import create_SCTN, IDENTITY
 from snn.resonator import freq_of_resonator, lp_by_lf
 
 # Global Variables
-JSON_FILE_PATH = "../filters4_xi0/clk_1536000/parameters/ecg/lf4"
+JSON_FILE_PATH = "../filters4_xi0/clk_15360/parameters/ecg/lf4/"
 
-JSON_FILE_PATH_RESULTS = "../filters4_xi0/clk_153600/ecg/lf4/"
+JSON_FILE_PATH_RESULTS = "../filters4_xi0/clk_1536/parameters/ecg/lf4/"
 # ========================================================================================
 # def neuron_output(neuron, signal_freq, shift_degrees=0, phase_number=10):
 def neuron_output(clk_freq, neuron, signal_freq, shift_degrees=0, phase_number=10):
@@ -295,10 +295,11 @@ def leraning_algorithm(lf, freq0, best_lp, chosen_bias, chosen_weights, clk_freq
                 print('mse', list(mses[i - 1]))
 
     # Create a dictionary with the parameters
+    #input_freq0 = round(input_freq0/10,2)
 
     params = {
         "clk_freq": clk_freq,
-        "input_freq": input_freq0/10, # Using for lp_by_lf(lf, freq0, clk_freq) function
+        "input_freq": input_freq0, # Using for lp_by_lf(lf, freq0, clk_freq) function
         "freq0": freq0,
         "lf": lf,
         "lp": best_lp,
@@ -313,10 +314,12 @@ def leraning_algorithm(lf, freq0, best_lp, chosen_bias, chosen_weights, clk_freq
     }
 
     # Construct the file path with freq0 in the name
-    json_file_path = JSON_FILE_PATH_RESULTS + "f_" + str(input_freq0/10) + ".json"
+    json_file_path = JSON_FILE_PATH_RESULTS + "f_" + str(input_freq0) + ".json"
 
     # Write the dictionary to the JSON file
     with open(json_file_path, "w") as json_file:
+        print("Create a dictionary with the parameters", input_freq0,freq0,use_freq0)
+        print(json_file)
         json.dump(params, json_file, indent=4)
 
     return flat_weights(resonator).tolist(), flat_thetas(resonator)
@@ -329,16 +332,19 @@ def leraning_algorithm(lf, freq0, best_lp, chosen_bias, chosen_weights, clk_freq
 
 #if __name__ == '__main__':
 def run(freq0,lf,lp,chosen_weights,chosen_bias,clk_freq=1536000,end_freq=None,step=None):
+    #freq0 = round(freq0,3)
     use_freq0 = freq0
-    input_freq0 = freq0
-    freq0/=10
+    input_freq0 = round(freq0 /10,3)
+    freq0= round(freq0 /10,3)
+    print(" freq0/=10", freq0)
+
     # ========================================================================================
 
     # for i in range(start_freq, end_freq - 1, -10):
     # for i in range(start_freq, end_freq):
     # for i in np.arange(start_freq, end_freq, step):
     # while (0 < freq0):
-    print(freq0)
+
     lp = lp_by_lf(lf, freq0, clk_freq)
     freq0 = freq_of_resonator(clk_freq, lf, lp)
     print(freq0,clk_freq)
@@ -436,15 +442,17 @@ def result_convert_with_different_clk():
 
 
                 with open(file_path, 'r') as file:
+
                     data = json.load(file)
 
                 clk_freq = int(data.get('clk_freq')/10)
-                input_freq0 = data.get('input_freq0')
+
+                input_freq = data.get('input_freq')
                 lf = data.get('lf')
                 weight_results = data.get('weight_results')
                 theta_results = data.get('theta_results')
-                print(input_freq0/10,clk_freq,lf)
-                run(input_freq0, lf, lp, weight_results, theta_results, clk_freq, end_freq=None, step=None)
+
+                run(input_freq, lf, lp, weight_results, theta_results, clk_freq, end_freq=None, step=None)
             except (ValueError, IndexError):
                 # Handle the case where the filename does not match the expected format
                 print(f"Unable to extract a valid number from {filename}")

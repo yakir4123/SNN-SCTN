@@ -1,0 +1,1 @@
+parameters are provided by decreasing clk freq from 153600 to 15360

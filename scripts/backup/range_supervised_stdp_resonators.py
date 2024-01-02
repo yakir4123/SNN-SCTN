@@ -1,18 +1,20 @@
+import os
+import re
 import json
 import numpy as np
 from tqdm import tqdm
-from fractions import Fraction
 from snn.layers import SCTNLayer
 from snn.spiking_network import SpikingNetwork
 from snn.spiking_neuron import create_SCTN, IDENTITY
 from snn.resonator import freq_of_resonator, lp_by_lf
 
 # Global Variables
-JSON_FILE_PATH = "../filters4_xi0/clk_1536000/parameters/ecg/"
+JSON_FILE_PATH = "../filters4_xi0/clk_1536000/parameters/ecg/lf4/"
 
-
+JSON_FILE_PATH_RESULTS = "../filters4_xi0/clk_1536000/parameters/ecg/lf4/"
 # ========================================================================================
-def neuron_output(neuron, signal_freq, shift_degrees=0, phase_number=10):
+# def neuron_output(neuron, signal_freq, shift_degrees=0, phase_number=10):
+def neuron_output(clk_freq, neuron, signal_freq, shift_degrees=0, phase_number=10):
     y_events = neuron.out_spikes()
     samples_per_cycle = clk_freq / signal_freq
     samples_per_degree = samples_per_cycle / 360
@@ -23,7 +25,6 @@ def neuron_output(neuron, signal_freq, shift_degrees=0, phase_number=10):
         ]
     if len(y_events) == 0:
         return y_events
-    # y_events -= int(((phase_number-1)/signal_freq) * clk_freq + shift_samples)
     return y_events
 
 
@@ -40,29 +41,6 @@ def events_to_spikes(events, run_window=0, spikes_arr_size=-1):
 
     y_spikes_rollsum = np.convolve(y_spikes, np.ones(run_window, dtype=int), 'valid')
     return y_spikes_rollsum
-
-
-# ========================================================================================
-def amplify_spikes(base_spikes, spikes_window, base_min, base_max, amplify):
-    base_spikes = events_to_spikes(base_spikes - resonator_input[0], spikes_arr_size=int(clk_freq / freq0) + 1)
-    result = np.zeros_like(base_spikes)
-    result[np.arange(len(base_spikes)) % 2 == 1] = 1
-    dc = (base_max + base_min) / 2
-    for i in range(spikes_window, len(result), spikes_window):
-        slice_spikes = base_spikes[i:i + spikes_window]
-        if len(slice_spikes) < spikes_window:
-            break
-        curr_spikes = np.sum(slice_spikes) - dc
-        new_spikes = int(curr_spikes * amplify)
-
-        if new_spikes > 0:
-            spikes_ts = np.linspace(0, spikes_window, new_spikes).astype(int) // 2 * 2 + i
-            result[spikes_ts] = 1
-        else:
-            spikes_ts = np.linspace(0, spikes_window, abs(new_spikes)).astype(int) // 2 * 2 - 1 + i
-            result[spikes_ts] = 0
-    result = np.where(result == 1)[0]
-    return result
 
 
 # ========================================================================================
@@ -159,18 +137,10 @@ def argmax(arr):
 
 
 # ========================================================================================
-def leraning_algorithm():
+def leraning_algorithm(lf, freq0, best_lp, chosen_bias, chosen_weights, clk_freq, resonator, ground_truth,
+                       learning_rules, spikes_window, rresonator_input, rolling_gt, sine_wave, resonator_input,
+                       momentum_beta, gt_wave_amplitudes,input_freq0, amplitude_size, window_size,use_freq0=None):
     epochs = 650
-    # title_fontsize = 21
-    # label_fontsize = 18
-    # tick_fontsize = 14
-    #
-    # phase_axs = 0
-    # mse_axs = 1
-    # phase_gt_ratio_axs = 2
-    # amplitude_gt_ratio_axs = 3
-    # delta_weights_axs = 4
-    # delta_biases_axs = 5
 
     heights_ratios = np.ones(6)
     heights_ratios[0] = 2
@@ -199,11 +169,6 @@ def leraning_algorithm():
     x_epsilon = len(rresonator_input) * 7 / 360
 
     gt_peaks = [argmax(gt) for gt in rolling_gt]
-    # x_phase = np.linspace(0, 360, len(rresonator_input))
-    #
-    # phase_lines = []
-    #
-    # norm = 360 / len(rresonator_input)
 
     areas_sns = [[], [], [], []]
     start_sns = [-1] * 4
@@ -224,7 +189,7 @@ def leraning_algorithm():
             resonator.input_full_data(sine_wave)
 
             # mse
-            output = [events_to_spikes(neuron_output(neuron, freq0) - resonator_input[0],
+            output = [events_to_spikes(neuron_output(clk_freq,neuron, freq0) - resonator_input[0],
                                        run_window=spikes_window,
                                        spikes_arr_size=int(clk_freq / freq0) + 1)
                       for neuron in resonator.neurons[1:]]
@@ -262,9 +227,9 @@ def leraning_algorithm():
                 # next condition is to check if the peak is in the right place.
                 o_argmax = argmax(o)
 
-                if (abs(o_argmax - gt_peaks[j]) <= 1.5 * x_epsilon and
-                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon / 3 and
-                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon / 3
+                if (abs(o_argmax - gt_peaks[j]) <= 2 * x_epsilon and
+                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon / 2 and
+                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon / 2
                 ):
                     if start_sns[j] == -1:
                         start_sns[j] = i
@@ -294,7 +259,6 @@ def leraning_algorithm():
                 ):
                     tuned_parameters += 1
 
-                # phase_diff_ratio = abs(peaks[j] - gt_peaks[j])  # number between 0 - 1 represent [0 - 180]
                 if not run_with_stdp:
                     neuron.supervised_stdp = None
                     amplitude_ratio[i, j] = amplitude_ratio[i - 1, j]
@@ -305,7 +269,11 @@ def leraning_algorithm():
                     wave_amplitude_ratio = abs((
                                                        wave_amplitude - gt_wave_amplitude) / gt_wave_amplitude)  # number between 0 - 1 represent [0 - gt_wave_amplitude]
                     neuron.supervised_stdp = learning_rules[j]
+
+                    # Amplitude size - 10e-6
                     neuron.supervised_stdp.A = (1 + wave_amplitude_ratio) * amplitude_size
+
+                    # Window size - 10/180
                     neuron.supervised_stdp.tau = clk_freq / freq0 * (window_size + abs(peaks[j] - gt_peaks[j]) / len(o))
 
                 amplitude_ratio[i, j] = abs((o_max - gt_wave_amplitudes[j][0]))
@@ -331,17 +299,19 @@ def leraning_algorithm():
                 print('mse', list(mses[i - 1]))
 
     # Create a dictionary with the parameters
+    #input_freq0 = round(input_freq0/10,2)
 
     params = {
         "clk_freq": clk_freq,
-        "input_freq0": input_freq0,
+        "input_freq": input_freq0, # Using for lp_by_lf(lf, freq0, clk_freq) function
         "freq0": freq0,
         "lf": lf,
         "lp": best_lp,
         "chosen_bias": chosen_bias,
         "chosen_weights": chosen_weights,
         "chosen_amplitude_size": amplitude_size,
-        "chosen_window_size": window_size_for_json_file,
+        "chosen_window_size": window_size,
+        #"converted_from_freq": use_freq0,  # Using for result converting with different clk
         "mse": mse_to_json,
         "mse_mean": sum(mse_to_json) / len(mse_to_json),
         "weight_results": flat_weights(resonator).tolist(),
@@ -350,10 +320,12 @@ def leraning_algorithm():
     }
 
     # Construct the file path with freq0 in the name
-    json_file_path = JSON_FILE_PATH + "f_" + str(input_freq0) + ".json"
+    json_file_path = JSON_FILE_PATH_RESULTS + "f_" + str(input_freq0) + ".json"
 
     # Write the dictionary to the JSON file
     with open(json_file_path, "w") as json_file:
+        print("Create a dictionary with the parameters", input_freq0,freq0,use_freq0)
+        print(json_file)
         json.dump(params, json_file, indent=4)
 
     return flat_weights(resonator).tolist(), flat_thetas(resonator)
@@ -361,35 +333,48 @@ def leraning_algorithm():
     #         'amplitudes': wave_amplitudes, 'dc': [o.mean() for o in output], 'tuned_parameters': tuned_parameters}
 
 
-if __name__ == '__main__':
-    # ========================================================================================
-    start_freq = 30.1
-    end_freq = 1
-    chosen_bias = [ -1.446,
-        -2.827,
-        -2.669,
-        -2.72]
-    chosen_weights = [ 7.867,
-        5.094,
-        5.72,
-        5.373,
-        5.555]
-    step = -0.2
-    amplitude_size = 10e-6
-    window_size = {"numerator": 5,"denominator":180}
-    #window_size = Fraction(5, 180)
-    window_size_for_json_file = "{} / {}".format(window_size['numerator'], window_size['denominator'])
-    window_size = window_size['numerator'] /  window_size['denominator']
+# ========================================================================================
 
-    #for i in range(start_freq, end_freq - 1, -1):
-    #for i in range(start_freq, end_freq):
+
+#if __name__ == '__main__':
+#def run(freq0,lf,lp,chosen_weights,chosen_bias,clk_freq=1536000,end_freq=None,step=None):
+def run():
+    #freq0 = round(freq0,3)
+    clk_freq = 1536000
+    input_freq0 = start_freq = 31
+    lf =4
+    # input_freq0 = round(freq0 /10,3)
+    # freq0= round(freq0 /10,3)
+    # print(" freq0/=10", freq0)
+    amplitude_size = 10e-6
+    window_size = 5 / 180
+    end_freq = 1
+    step = -0.3
+    chosen_bias = [
+        -1.109,
+        -3.273,
+        -3.243,
+        -2.96
+    ]
+    chosen_weights = [
+        7.086,
+        5.057,
+        6.426,
+        6.228,
+        5.818
+    ]
+    # ========================================================================================
+
+    # for i in range(start_freq, end_freq - 1, -10):
+    # for i in range(start_freq, end_freq):
     for i in np.arange(start_freq, end_freq, step):
-        clk_freq = 1536000
-        input_freq0 = round(i,1)
-        print("input_freq0 = ", i)
-        lf = 4
-        best_lp = lp_by_lf(lf, input_freq0, clk_freq)
-        freq0 = freq_of_resonator(clk_freq, lf, best_lp)
+        print(i)
+        freq0 = input_freq0 =i
+    # while (0 < freq0):
+
+        lp = lp_by_lf(lf, freq0, clk_freq)
+        freq0 = freq_of_resonator(clk_freq, lf, lp)
+        print(freq0,clk_freq)
         gain = 12
         duration = 15 / freq0
         x = np.linspace(0, duration, int(duration * clk_freq))
@@ -413,7 +398,7 @@ if __name__ == '__main__':
         resonator.add_layer(SCTNLayer([neuron]))
         resonator.log_out_spikes(-1)
         resonator.input_full_data(sine_wave)
-        resonator_input = neuron_output(resonator.neurons[0], freq0, shift_degrees=0)
+        resonator_input = neuron_output(clk_freq, resonator.neurons[0], freq0, shift_degrees=0)
         rresonator_input = events_to_spikes(resonator_input - resonator_input[0], run_window=spikes_window,
                                             spikes_arr_size=int(clk_freq / freq0) + 1)
 
@@ -425,7 +410,7 @@ if __name__ == '__main__':
             resonator.forget_logs()
 
             resonator.input_full_data(gain * sine_wave[int((1 - phase_shift) * wave_length):])
-            ground_truth.append(neuron_output(resonator.neurons[0], freq0))
+            ground_truth.append(neuron_output(clk_freq,resonator.neurons[0], freq0))
         for i, gt in enumerate(ground_truth):
             rolling_gt.append(
                 events_to_spikes(gt - resonator_input[0], run_window=spikes_window,
@@ -449,4 +434,58 @@ if __name__ == '__main__':
             resonator.log_out_spikes(i)
             neuron.supervised_stdp = None
 
-        chosen_weights, chosen_bias = leraning_algorithm()
+        chosen_weights, chosen_bias = leraning_algorithm(lf, freq0, lp, chosen_bias, chosen_weights, clk_freq,
+                                                         resonator, ground_truth, learning_rules, spikes_window,
+                                                         rresonator_input, rolling_gt, sine_wave, resonator_input,
+                                                         momentum_beta, gt_wave_amplitudes,input_freq0,
+                                                         amplitude_size,window_size,use_freq0=None)
+        #lp += 1
+
+
+# freq0 = 104
+# end_freq = 10
+# step = -0.4
+# chosen_weights = [11, 9, 10, 10, 10]
+# chosen_bias = [-1, -5, -5, -5]
+# lp = 72
+# lf = 5
+
+#run(freq0, lf, lp, chosen_weights, chosen_bias, clk_freq=1536000, end_freq=None, step=None)
+run()
+
+def result_convert_with_different_clk():
+    # Define a regular expression pattern to find numbers in the filename
+    number_pattern = re.compile(r'\d+(\.\d+)?')
+
+
+
+    # Iterate through each file in the folder
+    for filename in os.listdir(JSON_FILE_PATH):
+        if filename.endswith('.json'):
+            file_path = os.path.join(JSON_FILE_PATH, filename)
+
+            # Extract numbers after the underscore in the filename
+            try:
+                number = float(filename.split('_')[1].split('.json')[0])
+
+
+                with open(file_path, 'r') as file:
+
+                    data = json.load(file)
+
+                clk_freq = int(data.get('clk_freq')/10)
+
+                input_freq = data.get('input_freq')
+                lf = data.get('lf')
+                weight_results = data.get('weight_results')
+                theta_results = data.get('theta_results')
+
+                #run(input_freq, lf, lp, weight_results, theta_results, clk_freq, end_freq=None, step=None)
+            except (ValueError, IndexError):
+                # Handle the case where the filename does not match the expected format
+                print(f"Unable to extract a valid number from {filename}")
+
+# Call the function
+#result_convert_with_different_clk()
+
+

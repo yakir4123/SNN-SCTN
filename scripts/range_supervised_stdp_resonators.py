@@ -364,19 +364,19 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 28.2
+    start_freq = 27.6
     end_freq = 1
-    chosen_bias = [-0.753,
-        -2.63,
-        -2.82,
-        -2.899]
-    chosen_weights = [6.522,
-        4.957,
-        5.222,
-        5.769,
-        5.79]
+    chosen_bias = [-0.913,
+        -2.751,
+        -3.098,
+        -3.042]
+    chosen_weights = [5.711,
+        4.23,
+        5.237,
+        6.04,
+        6.133]
 
-    #weight_and_bias_owner = 28.8
+    weight_and_bias_owner = 27.7
     step = -0.3
     amplitude_size = 10e-6
     window_size = {"numerator": 5,"denominator":180}
@@ -386,79 +386,80 @@ if __name__ == '__main__':
 
     #for i in range(start_freq, end_freq - 1, -1):
     #for i in range(start_freq, end_freq):
-    for i in np.arange(start_freq, end_freq, step):
-        clk_freq = 1536000
-        weight_and_bias_owner = i+step*(-1)
-        #===================================
+    #for i in np.arange(start_freq, end_freq, step):
+    clk_freq = 1536000
 
-        # For loop use
-        input_freq0 = round(i,1)
-        print("input_freq0 = ", i)
+    #===================================
 
-        # For single use
-        # input_freq0 = round(start_freq, 1)
-        # print("input_freq0 = ", start_freq)
-        # ===================================
-        lf = 4
-        best_lp = lp_by_lf(lf, input_freq0, clk_freq)
-        freq0 = freq_of_resonator(clk_freq, lf, best_lp)
-        gain = 12
-        duration = 15 / freq0
-        x = np.linspace(0, duration, int(duration * clk_freq))
-        t = x * 2 * np.pi * freq0
-        sine_wave = np.sin(t)
-        spikes_window = 500
-        wave_length = int(clk_freq / freq0)
-        ground_truth = []
-        phase_shifts = [0] + [45] * 3
-        phase_shifts = np.cumsum(phase_shifts)
-        rolling_gt = []
-        momentum_beta = .0
+    # For loop use
+    # input_freq0 = round(i,1)
+    # print("input_freq0 = ", i)
+    # weight_and_bias_owner = i + step * (-1)
 
-        # ========================================================================================
+    # For single use
+    input_freq0 = round(start_freq, 1)
+    print("input_freq0 = ", start_freq)
+    # ===================================
+    lf = 4
+    best_lp = lp_by_lf(lf, input_freq0, clk_freq)
+    freq0 = freq_of_resonator(clk_freq, lf, best_lp)
+    gain = 12
+    duration = 15 / freq0
+    x = np.linspace(0, duration, int(duration * clk_freq))
+    t = x * 2 * np.pi * freq0
+    sine_wave = np.sin(t)
+    spikes_window = 500
+    wave_length = int(clk_freq / freq0)
+    ground_truth = []
+    phase_shifts = [0] + [45] * 3
+    phase_shifts = np.cumsum(phase_shifts)
+    rolling_gt = []
+    momentum_beta = .0
 
-        resonator = SpikingNetwork()
-        resonator.add_amplitude(1000)
-        # Encode to pdm
-        neuron = create_SCTN()
-        neuron.activation_function = IDENTITY
-        resonator.add_layer(SCTNLayer([neuron]))
+    # ========================================================================================
+
+    resonator = SpikingNetwork()
+    resonator.add_amplitude(1000)
+    # Encode to pdm
+    neuron = create_SCTN()
+    neuron.activation_function = IDENTITY
+    resonator.add_layer(SCTNLayer([neuron]))
+    resonator.log_out_spikes(-1)
+    resonator.input_full_data(sine_wave)
+    resonator_input = neuron_output(resonator.neurons[0], freq0, shift_degrees=0)
+    rresonator_input = events_to_spikes(resonator_input - resonator_input[0], run_window=spikes_window,
+                                        spikes_arr_size=int(clk_freq / freq0) + 1)
+
+    for phase_shift in phase_shifts:
+        phase_shift /= 360
+        resonator.input_full_data(
+            sine_wave[int((1 - phase_shift) * wave_length):int((20 - phase_shift) * wave_length)])
         resonator.log_out_spikes(-1)
-        resonator.input_full_data(sine_wave)
-        resonator_input = neuron_output(resonator.neurons[0], freq0, shift_degrees=0)
-        rresonator_input = events_to_spikes(resonator_input - resonator_input[0], run_window=spikes_window,
-                                            spikes_arr_size=int(clk_freq / freq0) + 1)
+        resonator.forget_logs()
 
-        for phase_shift in phase_shifts:
-            phase_shift /= 360
-            resonator.input_full_data(
-                sine_wave[int((1 - phase_shift) * wave_length):int((20 - phase_shift) * wave_length)])
-            resonator.log_out_spikes(-1)
-            resonator.forget_logs()
+        resonator.input_full_data(gain * sine_wave[int((1 - phase_shift) * wave_length):])
+        ground_truth.append(neuron_output(resonator.neurons[0], freq0))
+    for i, gt in enumerate(ground_truth):
+        rolling_gt.append(
+            events_to_spikes(gt - resonator_input[0], run_window=spikes_window,
+                             spikes_arr_size=int(clk_freq / freq0) + 1))
 
-            resonator.input_full_data(gain * sine_wave[int((1 - phase_shift) * wave_length):])
-            ground_truth.append(neuron_output(resonator.neurons[0], freq0))
-        for i, gt in enumerate(ground_truth):
-            rolling_gt.append(
-                events_to_spikes(gt - resonator_input[0], run_window=spikes_window,
-                                 spikes_arr_size=int(clk_freq / freq0) + 1))
+    gt_wave_amplitudes = [(o.max(), o.min()) for o in rolling_gt]
+    resonator = learning_resonator(
+        freq0=freq0,
+        clk_freq=clk_freq,
+        lf=lf,
+        thetas=chosen_bias,
+        weights=chosen_weights,
+        ground_truths=ground_truth,
+        A=2e-4,
+        time_to_learn=1e-5,
+        max_weight=np.inf,
+        min_weight=-np.inf,
+    )
+    learning_rules = [neuron.supervised_stdp for neuron in resonator.neurons[1:]]
+    for i, neuron in enumerate(resonator.neurons):
+        resonator.log_out_spikes(i)
+        neuron.supervised_stdp = None
 
-        gt_wave_amplitudes = [(o.max(), o.min()) for o in rolling_gt]
-        resonator = learning_resonator(
-            freq0=freq0,
-            clk_freq=clk_freq,
-            lf=lf,
-            thetas=chosen_bias,
-            weights=chosen_weights,
-            ground_truths=ground_truth,
-            A=2e-4,
-            time_to_learn=1e-5,
-            max_weight=np.inf,
-            min_weight=-np.inf,
-        )
-        learning_rules = [neuron.supervised_stdp for neuron in resonator.neurons[1:]]
-        for i, neuron in enumerate(resonator.neurons):
-            resonator.log_out_spikes(i)
-            neuron.supervised_stdp = None
-
-        chosen_weights, chosen_bias = leraning_algorithm()
+    chosen_weights, chosen_bias = leraning_algorithm()

@@ -340,6 +340,7 @@ def leraning_algorithm():
         "lp": best_lp,
         "chosen_bias": chosen_bias,
         "chosen_weights": chosen_weights,
+        "weight_and_bias_owner": weight_and_bias_owner,
         "chosen_amplitude_size": amplitude_size,
         "chosen_window_size": window_size_for_json_file,
         "mse": mse_to_json,
@@ -363,17 +364,19 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 27
+    start_freq = 28.2
     end_freq = 1
-    chosen_bias = [-1.153,
-        -3.386,
-        -3.23,
-        -3.431]
-    chosen_weights = [5.985,
-        4.069,
-        6.477,
-        6.473,
-        6.628]
+    chosen_bias = [-0.753,
+        -2.63,
+        -2.82,
+        -2.899]
+    chosen_weights = [6.522,
+        4.957,
+        5.222,
+        5.769,
+        5.79]
+
+    #weight_and_bias_owner = 28.8
     step = -0.3
     amplitude_size = 10e-6
     window_size = {"numerator": 5,"denominator":180}
@@ -385,10 +388,17 @@ if __name__ == '__main__':
     #for i in range(start_freq, end_freq):
     for i in np.arange(start_freq, end_freq, step):
         clk_freq = 1536000
+        weight_and_bias_owner = i+step*(-1)
+        #===================================
+
+        # For loop use
         input_freq0 = round(i,1)
         print("input_freq0 = ", i)
+
+        # For single use
         # input_freq0 = round(start_freq, 1)
         # print("input_freq0 = ", start_freq)
+        # ===================================
         lf = 4
         best_lp = lp_by_lf(lf, input_freq0, clk_freq)
         freq0 = freq_of_resonator(clk_freq, lf, best_lp)

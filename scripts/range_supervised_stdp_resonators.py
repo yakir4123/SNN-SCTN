@@ -364,19 +364,23 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 27.6
+    start_freq = 16.8
     end_freq = 1
-    chosen_bias = [-0.913,
-        -2.751,
-        -3.098,
-        -3.042]
-    chosen_weights = [5.711,
-        4.23,
-        5.237,
-        6.04,
-        6.133]
+    chosen_bias = [
+        -0.75,
+        -1.585,
+        -1.715,
+        -1.707
+         ]
+    weight_and_bias_owner = 17.8
+    chosen_weights = [
+        4.314,
+        2.913,
+        3.072,
+        3.417,
+        3.418
+                        ]
 
-    weight_and_bias_owner = 27.7
     step = -0.3
     amplitude_size = 10e-6
     window_size = {"numerator": 5,"denominator":180}

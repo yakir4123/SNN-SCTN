@@ -364,21 +364,21 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 16.8
+    start_freq = 16.3
     end_freq = 1
     chosen_bias = [
         -0.75,
-        -1.585,
-        -1.715,
-        -1.707
+        -1.571,
+        -1.703,
+        -1.435
          ]
-    weight_and_bias_owner = 17.8
+    weight_and_bias_owner = 16.4
     chosen_weights = [
-        4.314,
-        2.913,
-        3.072,
-        3.417,
-        3.418
+        4.192,
+        2.774,
+        3.146,
+        3.459,
+        3.049
                         ]
 
     step = -0.3
@@ -401,8 +401,8 @@ if __name__ == '__main__':
     # weight_and_bias_owner = i + step * (-1)
 
     # For single use
-    input_freq0 = round(start_freq, 1)
-    print("input_freq0 = ", start_freq)
+    input_freq0 = round(start_freq, 2)
+    print("input_freq0 = ", input_freq0)
     # ===================================
     lf = 4
     best_lp = lp_by_lf(lf, input_freq0, clk_freq)

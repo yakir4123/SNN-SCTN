@@ -364,26 +364,26 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 16.3
+    start_freq = 15.5
     end_freq = 1
     chosen_bias = [
         -0.75,
-        -1.571,
-        -1.703,
-        -1.435
+        -1.579,
+        -1.387,
+        -1.24
          ]
     weight_and_bias_owner = 16.4
     chosen_weights = [
-        4.192,
-        2.774,
-        3.146,
-        3.459,
-        3.049
+        4.694,
+        2.901,
+        3.262,
+        2.78,
+        2.374
                         ]
 
     step = -0.3
     amplitude_size = 10e-6
-    window_size = {"numerator": 5,"denominator":180}
+    window_size = {"numerator": 1,"denominator":180}
     #window_size = Fraction(5, 180)
     window_size_for_json_file = "{} / {}".format(window_size['numerator'], window_size['denominator'])
     window_size = window_size['numerator'] /  window_size['denominator']

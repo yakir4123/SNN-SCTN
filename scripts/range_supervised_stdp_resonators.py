@@ -195,8 +195,13 @@ def leraning_algorithm():
 
     phase_ratio = np.zeros((epochs + 1, 4))
 
-    y_epsilon = spikes_window * 0.036
-    x_epsilon = len(rresonator_input) * 7 / 360
+    #================================================
+    # y_epsilon = spikes_window * 0.036
+    # x_epsilon = len(rresonator_input) * 7 / 360
+    y_epsilon = spikes_window * 0.03
+    x_epsilon = len(rresonator_input) * 5 / 360
+    #================================================
+
 
     gt_peaks = [argmax(gt) for gt in rolling_gt]
     # x_phase = np.linspace(0, 360, len(rresonator_input))
@@ -262,16 +267,21 @@ def leraning_algorithm():
                 # next condition is to check if the peak is in the right place.
                 o_argmax = argmax(o)
 
-                if (abs(o_argmax - gt_peaks[j]) <= 1.5 * x_epsilon and
-                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon / 3 and
-                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon / 3
+                if (abs(o_argmax - gt_peaks[j]) <= x_epsilon_correction * x_epsilon and
+                        abs(o_max - gt_wave_amplitudes[j][0]) > y_epsilon / y_epsilon_correction and
+                        abs(o_min - gt_wave_amplitudes[j][1]) > y_epsilon / y_epsilon_correction
                 ):
                     if start_sns[j] == -1:
                         start_sns[j] = i
                     areas_j = areas_sns[j]
                     if areas_j == [] or len(areas_j[-1]) == 2:
                         areas_j.append((i,))
-                    stretch_or_shrink_scale = (mses[i, j] * 1000 // 1e3) / 1e3
+
+                    # ================================================
+                    # stretch_or_shrink_scale = (mses[i, j] * 1000 // 1e4) / 1e4
+                    stretch_or_shrink_scale = (mses[i, j] * 1000 // 1e4) / 1e4
+                    # ================================================
+
                     if gt_wave_amplitudes[j][1] < o_min < o_max < gt_wave_amplitudes[j][0]:
                         neuron.theta -= stretch_or_shrink_scale
                         neuron.synapses_weights[0] += 2 * stretch_or_shrink_scale
@@ -341,8 +351,12 @@ def leraning_algorithm():
         "chosen_bias": chosen_bias,
         "chosen_weights": chosen_weights,
         "weight_and_bias_owner": weight_and_bias_owner,
+        # ============================================
+        "x_epsilon_correction" : x_epsilon_correction,
+        "y_epsilon_correction" : y_epsilon_correction,
         "chosen_amplitude_size": amplitude_size,
         "chosen_window_size": window_size_for_json_file,
+        # ============================================
         "mse": mse_to_json,
         "mse_mean": sum(mse_to_json) / len(mse_to_json),
         "weight_results": flat_weights(resonator).tolist(),
@@ -364,26 +378,29 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 15.5
+    start_freq = 15.0
     end_freq = 1
     chosen_bias = [
         -0.75,
-        -1.579,
-        -1.387,
-        -1.24
+        -1.588,
+        -1.399,
+        -1.266
          ]
-    weight_and_bias_owner = 16.4
+    weight_and_bias_owner = 15.5
     chosen_weights = [
-        4.694,
-        2.901,
-        3.262,
-        2.78,
-        2.374
+        3.371,
+        2.027,
+        3.082,
+        2.824,
+        2.723
                         ]
 
     step = -0.3
+
+    x_epsilon_correction = 1
+    y_epsilon_correction = 4
     amplitude_size = 10e-6
-    window_size = {"numerator": 1,"denominator":180}
+    window_size = {"numerator": 5,"denominator":180}
     #window_size = Fraction(5, 180)
     window_size_for_json_file = "{} / {}".format(window_size['numerator'], window_size['denominator'])
     window_size = window_size['numerator'] /  window_size['denominator']
@@ -401,7 +418,7 @@ if __name__ == '__main__':
     # weight_and_bias_owner = i + step * (-1)
 
     # For single use
-    input_freq0 = round(start_freq, 2)
+    input_freq0 = round(start_freq, 1)
     print("input_freq0 = ", input_freq0)
     # ===================================
     lf = 4

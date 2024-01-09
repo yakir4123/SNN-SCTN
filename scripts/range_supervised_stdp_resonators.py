@@ -378,7 +378,7 @@ def leraning_algorithm():
 
 if __name__ == '__main__':
     # ========================================================================================
-    start_freq = 15.0
+    start_freq = 14.9
     end_freq = 1
     chosen_bias = [
         -0.75,

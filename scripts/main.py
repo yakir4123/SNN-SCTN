@@ -10,7 +10,7 @@ from optuna.samplers import CmaEsSampler
 
 from utils import *
 from snn.spiking_neuron import IDENTITY, create_SCTN
-from snn.resonator import test_frequency, freq_of_resonator, \
+from snn.resonator import test_resonator_on_chirp, freq_of_resonator, \
     lf_lp_options, create_excitatory_resonator, create_base_resonator_by_parameters
 
 
@@ -46,8 +46,8 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
     # plot_network(my_resonator.network)
     my_resonator.network.log_membrane_potential(-1)
     # my_resonator.network.log_out_spikes(-1)
-    t = timing(test_frequency, return_res=False, return_time=True)(my_resonator, start_freq=start_freq, step=step,
-                                                                   test_size=test_size, clk_freq=f_pulse)
+    t = timing(test_resonator_on_chirp, return_res=False, return_time=True)(my_resonator, start_freq=start_freq, step=step,
+                                                                            test_size=test_size, clk_freq=f_pulse)
     neuron = my_resonator.network.neurons[-1]
     LF = neuron.leakage_factor
     LP = neuron.leakage_period
@@ -99,7 +99,7 @@ def simulate_and_plot(freq0, LF, LP, gains, spectrum,
 
 def manual_parameters_plot():
     if LF == -1 or LP == -1:
-        print(lf_lp_options(freq0=freq0, f_pulse=clk_pulse))
+        print(lf_lp_options(freq0=freq0, clk_freq=clk_pulse))
     gain_factor = 9344 / ((2 ** (2 * LF - 3)) * (1 + LP))
     gains = {'th_gain0': gain_factor, 'th_gain1': gain_factor, 'th_gain2': gain_factor, 'th_gain3': gain_factor,
              'weight_gain0': gain_factor * 1.1, 'weight_gain1': gain_factor * 0.9,
@@ -173,9 +173,9 @@ def custom_resonator_output_spikes(
     spikes_neuron = my_resonator.neurons[-1]
 
     spikes_neuron.membrane_sample_max_window = np.zeros(1).astype('float32')
-    t = timing(test_frequency, return_res=False, return_time=True)(my_resonator,
-                                                                   start_freq=start_freq, step=step,
-                                                                   test_size=test_size, clk_freq=clk_freq)
+    t = timing(test_resonator_on_chirp, return_res=False, return_time=True)(my_resonator,
+                                                                            start_freq=start_freq, step=step,
+                                                                            test_size=test_size, clk_freq=clk_freq)
 
     for i in log_neuron_potentials:
         membrane_neuron = my_resonator.neurons[i]

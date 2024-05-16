@@ -161,23 +161,30 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
     return network
 
 
-def trained_resonator(freq0, filters_folder='filters4'):
-    clk_freq = 1536
-    f = freq0
-    while f > 1:
-        f /= 10
-        clk_freq *= 10
-    configured_freq = freq0 * 1_536_000 / clk_freq
-    root_folder = f'../{filters_folder}/clk_1536000/parameters/'
-    available_resonators = np.array([int(f[2:-5]) for f in os.listdir(root_folder)])
-    arg_chosen_resonator = np.argmin(np.abs(available_resonators - configured_freq))
-    chosen_resonator = available_resonators[arg_chosen_resonator]
-    with open(f'{root_folder}/f_{chosen_resonator}.json') as f:
-        parameters = json.load(f)
-        thetas = parameters['thetas']
-        weights = parameters['weights']
-        lf = parameters['lf']
+def trained_resonator(freq0, filters_folder='filters4_xi0'):
+    root_folder = 'C:\\Users\\user1\\PycharmProjects\\SNN-SCTN\\filters4_xi0\\united_filters'
+    res_array = []
+    for f in os.listdir(root_folder):
+        if "." in (f[2:-5]):
+            res_array.append(float(f[2:-5]))
+        else:
+            res_array.append(int(f[2:-5]))
 
+    available_resonators = np.array(res_array)
+    arg_chosen_resonator = np.argmin(np.abs(available_resonators - freq0))
+    if isinstance(res_array[arg_chosen_resonator], int):
+        chosen_resonator = int(available_resonators[arg_chosen_resonator])
+    else:
+        chosen_resonator = float(available_resonators[arg_chosen_resonator])
+    print(chosen_resonator, 'Type: ', type(chosen_resonator))
+    print(f'{root_folder}\\f_{chosen_resonator}.json')
+    with open(f'{root_folder}\\f_{chosen_resonator}.json') as f:
+        parameters = json.load(f)
+        thetas = parameters['chosen_bias']
+        weights = parameters['chosen_weights']
+        lf = parameters['lf']
+        clk_freq = parameters['clk_freq']
+    print('Thetas: ', thetas, ', Weights:', weights, ', Leakage Factor:  ', lf, ', Clock Frequency: ', clk_freq)
     return simple_resonator(freq0, clk_freq, lf, thetas, weights)
 
 
@@ -214,7 +221,8 @@ def simple_resonator(
 ):
     LF = lf
     LP = lp_by_lf(LF, freq0, clk_freq)
-    network = SpikingNetwork(clk_freq)
+    print('f is: ', freq0, 'f_clk =', clk_freq ,'Leakage Period is:',LP)
+    network = SpikingNetwork()##(clk_freq)
     network.add_amplitude(1000)
 
     # Encode to pdm
@@ -268,6 +276,7 @@ def create_chirp_signal(test_size, clk_freq, start_freq, step, shift):
     sine_wave = sine_wave * 2 * np.pi / clk_freq
     sine_wave = np.cumsum(sine_wave) + shift  # phase
     return np.sin(sine_wave), sine_wave
+
 
 
 @njit

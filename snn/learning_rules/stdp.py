@@ -11,11 +11,8 @@ spec = OrderedDict([
     ('A_LTD', float32),
     ('tau', float32),
     ('P', float64[:]),
-    # ('M', float64[:]),
     ('M', float64),
     ('decay', float64),
-    ('t_pre', int32[:]),
-    ('t_post', int32),
     ('dt', float32),
     ('wmax', float32),
     ('wmin', float32),
@@ -58,15 +55,9 @@ class STDP:
         self.P = np.zeros(synapses_weights.shape, dtype=np.float64)
         self.M = 0.0
 
-        # start with a very large counter (compare to dt -> dW -> 0)
-        self.t_pre = (np.ones(synapses_weights.shape) * tau * 100).astype(np.int32)
-        self.t_post = int(tau * 100)
-
     def reset_learning(self):
         self.P = np.zeros(self.P.shape, dtype=np.float64)
         self.M = 0.0
-        self.t_pre = (np.ones(self.t_pre.shape) * self.tau * 10).astype(np.int32)
-        self.t_post = int(self.tau * 10)
 
     def tick(self, pre_spikes, post_spike):
         self.P = np.minimum(self.decay * self.P + self.A_LTP * pre_spikes, 1)

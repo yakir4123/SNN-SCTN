@@ -19,7 +19,7 @@ from snn.spiking_neuron import SCTNeuron, create_SCTN
 ]))
 class SpikingNetwork:
 
-    def __init__(self, clk_freq):
+    def __init__(self):
         """
         @enable_by: list of all neurons that map if neuron is enabled by other neuron
             id is enabled by self.enable_by[id]
@@ -28,12 +28,6 @@ class SpikingNetwork:
         @neurons: list of all the neurons inside the network
         @layers_neurons: list of all the layers
         """
-        self.clk_freq = clk_freq
-        # clk_freq // 4 points in [0, pi/2]
-        range_space = np.arange(clk_freq // 4) / (clk_freq // 4) * (np.pi / 2)
-        self.clk_freq_sine = np.sin(range_space).astype(np.float32)
-        self.clk_freq_i = 0
-        self.clk_freq_qrt = 0
         self.enable_by = numbaList([np.int32(0) for _ in range(0)])
         self.spikes_graph = DirectedEdgeListGraph()
 
@@ -128,7 +122,7 @@ class SpikingNetwork:
             classes += res
         return classes
 
-    def input_full_data_spikes(self, spike_train, stop_on_first_spike=True):
+    def input_full_data_spikes(self, spike_train, stop_on_first_spike=False):
         classes = np.zeros(len(self.layers_neurons[-1].neurons))
         for i, spikes in enumerate(spike_train):
             res = self.input(spikes)
@@ -139,27 +133,16 @@ class SpikingNetwork:
 
     def input_potential(self, potential):
         potential = (potential * self.amplitude).astype(np.int16)
-        self.clk_freq_i += 1
-        if self.clk_freq_i == len(self.clk_freq_sine):
-            self.clk_freq_i = 0
-            self.clk_freq_qrt = (self.clk_freq_qrt + 1) % 4
 
         for i, p in enumerate(potential):
             neuron = self.layers_neurons[0].neurons[i]
-            if neuron.use_clk_input:
-                p = self._calculate_clk()
             neuron.membrane_potential = p
 
         return self.input(np.zeros(len(potential)))
 
-    def _calculate_clk(self):
-        if self.clk_freq_qrt % 2 == 1:
-            p = self.clk_freq_sine[-self.clk_freq_i]
-        else:
-            p = self.clk_freq_sine[self.clk_freq_i]
-        if self.clk_freq_qrt >= 2:
-            p = -p
-        return p
+    def forget_logs(self):
+        for neuron in self.neurons:
+            neuron.forget_logs()
 
     def __getitem__(self, nid):
         if nid < 0:

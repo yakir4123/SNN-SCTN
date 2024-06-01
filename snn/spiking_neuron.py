@@ -1,6 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
+
+from snn.learning_rules.supervised_stdp import SupervisedSTDP
 from utils import jitclass, njit
 from snn.learning_rules.stdp import STDP
 from numba import int32, float32, int8, float64, int16, boolean, optional, types, int64
@@ -25,8 +27,10 @@ spec = OrderedDict([
     ('synapses_weights', float64[:]),
     ('membrane_should_reset', boolean),
     ('stdp', optional(STDP.class_type.instance_type)),
+    ('supervised_stdp', optional(SupervisedSTDP.class_type.instance_type)),
 
     ('index', int32),
+    ('injected_output_spikes', int64[:]),
     ('_out_spikes', int64[:]),
     ('_out_spikes_index', int32),
     ('log_out_spikes', boolean),
@@ -41,6 +45,7 @@ spec = OrderedDict([
 IDENTITY = 0
 BINARY = 1
 SIGMOID = 2
+INJECT = 3
 
 
 @jitclass(spec)
@@ -63,7 +68,9 @@ class SCTNeuron:
         self.threshold_pulse = threshold_pulse
         self.synapses_weights = np.copy(synapses_weights)
         self.stdp = None
+        self.supervised_stdp = None
         self.label = None
+        self.injected_output_spikes = np.zeros(0).astype('int64')
 
         self.rand_gauss_var = 0
         self.gaussian_rand_order = 8
@@ -75,7 +82,7 @@ class SCTNeuron:
         self.log_rand_gauss_var = log_rand_gauss_var
         self.log_out_spikes = log_out_spikes
         self._membrane_potential_graph = np.zeros(100).astype('float32')
-        self.membrane_sample_max_window = np.zeros(10000).astype('float32')
+        self.membrane_sample_max_window = np.zeros(1).astype('float32')
         self._out_spikes = np.zeros(100).astype('int64')
         self.rand_gauss_var_graph = np.zeros(100).astype('int32')
         self.index = 0
@@ -90,6 +97,8 @@ class SCTNeuron:
 
         if self.stdp is not None:
             self.synapses_weights = self.stdp.tick(pre_spikes, emit_spike)
+        if self.supervised_stdp is not None:
+            self.synapses_weights = self.supervised_stdp.tick(self.synapses_weights, pre_spikes, emit_spike, self.index)
 
         if self.log_membrane_potential:
             sample_window_size = len(self.membrane_sample_max_window)
@@ -140,6 +149,8 @@ class SCTNeuron:
             emit_spike = self._activation_function_binary()
         elif self.activation_function == SIGMOID:
             emit_spike = self._activation_function_sigmoid()
+        elif self.activation_function == INJECT:
+            emit_spike = self._activation_injection_spikes()
         else:
             raise ValueError("Only 3 activation functions are supported [IDENTITY, BINARY, SIGMOID]")
 
@@ -165,6 +176,16 @@ class SCTNeuron:
                          wmin,
                          )
 
+    def set_supervised_stdp(self, A, tau, clk_freq, wmax, wmin, desired_output):
+        self.supervised_stdp = SupervisedSTDP(self.synapses_weights,
+                                              A,
+                                              tau,
+                                              clk_freq,
+                                              wmax,
+                                              wmin,
+                                              desired_output
+                                              )
+
     def set_stdp_ltp(self, A_LTP):
         if self.stdp is not None:
             self.stdp.A_LTP = A_LTP
@@ -176,11 +197,12 @@ class SCTNeuron:
     def reset_learning(self):
         if self.stdp is not None:
             self.stdp.reset_learning()
+        if self.supervised_stdp is not None:
+            self.stdp.reset_learning()
 
     def _activation_function_identity(self):
         const = self.identity_const
         c = self.membrane_potential + const
-        m = 2 * (self.identity_const + 1)
 
         if self.membrane_potential > const:
             emit_spike = 1
@@ -190,8 +212,8 @@ class SCTNeuron:
             self.rand_gauss_var = const
         else:
             self.rand_gauss_var = int(self.rand_gauss_var + c + 1)
-            if self.rand_gauss_var >= m:
-                self.rand_gauss_var = self.rand_gauss_var % m
+            if self.rand_gauss_var >= 65536:
+                self.rand_gauss_var -= 65536
                 emit_spike = 1
             else:
                 emit_spike = 0
@@ -212,14 +234,31 @@ class SCTNeuron:
             return 1
         return 0
 
+    def _activation_injection_spikes(self):
+        if self.index in self.injected_output_spikes:
+            return 1
+        return 0
     def __hash__(self):
         return self._id
 
     def membrane_potential_graph(self):
         return self._membrane_potential_graph[:self.index // len(self.membrane_sample_max_window)]
 
-    def out_spikes(self):
-        return self._out_spikes[:self._out_spikes_index]
+    def out_spikes(self, is_timestamps=True, spikes_array_size=-1):
+        """
+
+        :param is_timestamps:
+        :param spikes_array_size:
+        :return: an int64 bit! if its spikes encoded it should be transformed later to int8
+        """
+        ts = self._out_spikes[:self._out_spikes_index]
+        if is_timestamps:
+            return ts
+        if spikes_array_size == -1:
+            spikes_array_size = 1 + ts[-1]
+        res = np.zeros(spikes_array_size).astype('int64')
+        res[ts] = 1
+        return res
 
     def forget_logs(self):
         self._out_spikes_index = 0

@@ -1,0 +1,5 @@
+matplotlib
+scipy
+snntorch
+torch
+numpy==1.26.4 # avoid Open MP dependencies

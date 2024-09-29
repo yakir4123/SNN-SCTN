@@ -162,7 +162,8 @@ def create_excitatory_inhibitory_resonator(freq0, clk_freq):
 
 
 def trained_resonator(freq0, filters_folder='filters4_xi0'):
-    root_folder = 'C:\\Users\\user1\\PycharmProjects\\SNN-SCTN\\filters4_xi0\\united_filters'
+    #root_folder = 'C:\\Users\\user1\\PycharmProjects\\SNN-SCTN\\filters4_xi0\\united_filters'
+    root_folder = 'C:\\Users\\pariz\\Project\\SNN-SCTN\\filters4_xi0\\united_filters'
     res_array = []
     for f in os.listdir(root_folder):
         if "." in (f[2:-5]):
